@@ -9,11 +9,13 @@ use Awcodes\Mason\Support\Faker;
 use Awcodes\Mason\Support\IframeEntryRenderer;
 use Awcodes\Mason\Support\IframeRenderer;
 use Awcodes\Mason\Support\MasonRenderer;
+use Awcodes\Mason\Tests\Fixtures\AreaContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\ContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\LivewireNestedForm;
 use Awcodes\Mason\Tests\Fixtures\RestrictedContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\SimpleBrick;
 use Awcodes\Mason\Tests\Fixtures\TestBrick;
+use Filament\Actions\Testing\TestAction;
 use Livewire\Livewire;
 use Workbench\App\Models\Page;
 
@@ -285,5 +287,51 @@ describe('Mason commands on nested bricks', function () {
 
         expect($content[0]['attrs'])->not->toHaveKey('label')
             ->and($content[0]['content'][0]['attrs'])->toBe(['id' => 'simple-brick', 'config' => []]);
+    });
+});
+
+describe('container areas', function () {
+    $content = fn (): array => [
+        nestedBrick('area-container-brick', [], [
+            nestedBrick('simple-brick', attrs: ['area' => 'a']),
+        ]),
+    ];
+
+    it('renders an area with its bricks, a drop target and a drop zone that inserts into it', function () use ($content) {
+        $html = IframeRenderer::make($content())->bricks([SimpleBrick::class, AreaContainerBrick::class])->toHtml();
+        $attrs = e(json_encode(['area' => 'a']));
+
+        expect($html)
+            ->toContain('<section class="area-a" data-drop-target data-drop-parent="0" data-drop-attrs="' . $attrs . '">')
+            ->toContain('data-drop-attrs="' . $attrs . '"')
+            ->toMatch('/class="area-a".*simple-brick.*class="area-b"/s')
+            // Only the empty area shows the placeholder
+            ->and(str($html)->betweenFirst('class="area-a"', '</section>')->toString())->not->toContain('mason-drop-zone-empty')
+            ->and(str($html)->betweenFirst('class="area-b"', '</section>')->toString())->toContain('mason-drop-zone-empty');
+    });
+
+    it('renders no editor markup outside the editor', function () use ($content) {
+        $html = MasonRenderer::make($content())->bricks([SimpleBrick::class, AreaContainerBrick::class])->toHtml();
+
+        expect($html)->toMatch('/<section class="area-a"\s*><div class="simple-brick">/')
+            ->not->toContain('data-drop');
+    });
+
+    it('inserts a brick with the attributes of the drop zone, but not over its own', function () {
+        Livewire::test(LivewireNestedForm::class)
+            ->fillForm(['content' => [nestedBrick('container-brick', [], [], ['uid' => 'c'])]])
+            ->callAction(
+                TestAction::make('handleBrick')->schemaComponent('content')->arguments([
+                    'id' => 'simple-brick',
+                    'mode' => 'insert',
+                    'parent' => '0',
+                    'position' => 0,
+                    'attrs' => ['area' => 'b', 'id' => 'test-brick', 'uid' => 'stolen'],
+                ]),
+            )
+            ->assertSchemaStateSet(fn (array $state) => expect($state['content'][0]['content'][0]['attrs'])
+                ->area->toBe('b')
+                ->id->toBe('simple-brick')
+                ->and($state['content'][0]['content'][0]['attrs']['uid'] ?? null)->not->toBe('stolen'));
     });
 });

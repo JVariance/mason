@@ -3,12 +3,15 @@
     class="mason-drop-zone mason-drop-zone-nested @if ($isEmpty) mason-drop-zone-empty @endif"
     data-drop-parent="{{ $parent }}"
     data-drop-index="{{ $index }}"
+    @if (! empty($attrs))
+        data-drop-attrs="{{ json_encode($attrs) }}"
+    @endif
 >
     <button
         type="button"
         class="mason-drop-zone-add"
         data-action="add-into"
-        title="{{ __('mason::mason.preview.add') }}"
+        title="{{ __("mason::mason.preview.add") }}"
     >
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -21,7 +24,7 @@
             />
         </svg>
         @if ($isEmpty)
-            <span>{{ __('mason::mason.preview.placeholder') }}</span>
+            <span>{{ __("mason::mason.preview.placeholder") }}</span>
         @endif
     </button>
 </div>

@@ -60,6 +60,25 @@ Each child gives access to the stored brick:
 
 `toHtml()` is not called for a container brick. `getAllowedChildren()` takes classes or ids; inserting or moving other bricks into the container is refused, in the editor and on the server.
 
+## Areas
+
+A container can have several areas, e.g. a header and a body, or slots. It tells them apart by an attribute of its bricks and gives each area its own drop zone:
+
+```blade
+@foreach (['header', 'body'] as $area)
+    <div {{ $children->dropTarget(['area' => $area]) }}>
+        {{ $children->where('area', $area) }}
+        {{ $children->dropZone(['area' => $area]) }}
+    </div>
+@endforeach
+```
+
+- `where('area', 'body')` gives the bricks whose attribute has that value.
+- `dropZone(['area' => 'body'])` inserts bricks with that attribute. Bricks dragged onto it are moved there and get the attribute too, also when they only change the area.
+- `dropTarget(['area' => 'body'])` marks the element around the area, so that bricks dropped next to its bricks, or added with a brick's add button, get the attribute as well.
+
+Outside the editor both render nothing. The attribute is stored on the brick (`attrs.area`) and read with `$child->getAttribute('area')`. It never replaces a brick's `id` or `config`.
+
 ## Storage
 
 The bricks inside a container are stored under its `content` key:

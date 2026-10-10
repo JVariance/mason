@@ -133,11 +133,22 @@ class IframeRenderer
             ])->render());
         }, $content, array_keys($content));
 
-        return new BrickChildren($children, view('mason::components.drop-zone', [
+        $zone = fn (array $attrs = [], ?bool $isEmpty = null): string => view('mason::components.drop-zone', [
             'parent' => $path,
             'index' => count($content),
-            'isEmpty' => $content === [],
-        ])->render());
+            'isEmpty' => $isEmpty ?? $content === [],
+            'attrs' => $attrs,
+        ])->render();
+
+        return new BrickChildren(
+            $children,
+            $zone(),
+            // An area of the container: empty when none of the container's bricks has the attributes
+            fn (array $attrs): string => $zone($attrs, ! collect($content)->contains(
+                fn (array $child): bool => collect($attrs)->every(fn (mixed $value, string $key): bool => data_get($child['attrs'] ?? [], $key) === $value),
+            )),
+            fn (array $attrs): string => 'data-drop-target data-drop-parent="' . e($path) . '" data-drop-attrs="' . e(json_encode($attrs)) . '"',
+        );
     }
 
     /**
