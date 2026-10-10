@@ -285,6 +285,15 @@ class BrickTree
     }
 
     /**
+     * A uid for a brick that a migration adds, the same every time for the same parent, so that ids stay stable
+     * before the content is saved, and translations that share uids get the same one.
+     */
+    public static function derivedUid(string $uid, string $name): string
+    {
+        return substr(hash('sha256', $uid . '|' . $name), 0, 26);
+    }
+
+    /**
      * Gives every brick without a uid a new one, and so does a brick whose uid
      * an earlier brick already has.
      *

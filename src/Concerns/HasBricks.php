@@ -8,6 +8,7 @@ use Awcodes\Mason\Brick;
 use Awcodes\Mason\BrickGroup;
 use Awcodes\Mason\Bricks\Section;
 use Awcodes\Mason\Contracts\ContainsBricks;
+use Awcodes\Mason\Support\BrickMigrator;
 use Closure;
 
 trait HasBricks
@@ -67,6 +68,17 @@ trait HasBricks
         }
 
         return $bricks;
+    }
+
+    /**
+     * The content with every brick at its current version (BrickMigrator).
+     *
+     * @param  array<int, mixed>  $blocks
+     * @return array<int, mixed>
+     */
+    public function upgradeBricks(array $blocks): array
+    {
+        return BrickMigrator::upgrade($blocks, $this->getCachedBricks());
     }
 
     /**

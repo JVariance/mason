@@ -69,7 +69,8 @@ class Mason extends Field implements CanBeLengthConstrained
                 $state = $state['content'];
             }
 
-            $state = BrickTree::ensureUids($state);
+            // Older versions of bricks are brought up to date first; bricks a migration adds then get uids
+            $state = BrickTree::ensureUids($component->upgradeBricks($state));
 
             if ($component->hasOutline()) {
                 $state = BrickTree::map($state, function (array $block) use ($component): array {

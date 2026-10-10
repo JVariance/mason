@@ -128,6 +128,36 @@ See [Rendering](rendering.md#passing-data-to-bricks) for how to supply it.
 > [!WARNING]
 > The editor preview does not supply `$data`. It renders in an iframe that has no record in scope, so a record-dependent brick renders its fallback there. Write the fallback so the brick still reads sensibly while it is being edited.
 
+## Changing the stored format
+
+When a brick's stored format changes, e.g. a field is renamed or part of its config becomes a brick inside it, raise its version and add a step that brings stored bricks up to date:
+
+```php
+public static function getVersion(): int
+{
+    return 2;
+}
+
+public static function getMigrations(): array
+{
+    return [
+        // From version 1 to 2
+        1 => function (array $brick): array {
+            $brick['attrs']['config']['heading'] = $brick['attrs']['config']['title'] ?? null;
+            unset($brick['attrs']['config']['title']);
+
+            return $brick;
+        },
+    ];
+}
+```
+
+- A step gets the whole stored brick, with `attrs` and the bricks inside it (`content`), and returns it changed. Steps run in order from the stored version (`attrs.v`, 1 when missing) to the current one.
+- The field upgrades content when it loads it, and the renderers when they render it, so content saved with an older version keeps working, old revisions included. The upgraded content is stored the next time it is saved. To upgrade stored content at once, run `BrickMigrator::upgrade($content, $bricks)` over it, e.g. in a command.
+- A step that adds a brick inside gives it `BrickTree::derivedUid($parentUid, 'name')`: the same uid every time for the same parent, so ids stay stable before the content is saved.
+- Bricks at version 1 store no version, so content does not change until a brick gets one.
+- Steps cannot be undone. Keep them as long as stored content (and revisions) may be older.
+
 ## Bricks without a form
 
 For a brick that needs no configuration — a divider, a fixed callout — return the view from `toHtml()` and hide the modal, so inserting it adds it immediately:

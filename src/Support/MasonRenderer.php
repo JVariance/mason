@@ -82,7 +82,7 @@ class MasonRenderer implements Htmlable
 
     public function toUnsafeHtml(): string
     {
-        return $this->renderBlocks($this->getBlocks());
+        return $this->renderBlocks($this->upgradeBricks($this->getBlocks()));
     }
 
     public function toHtml(): string

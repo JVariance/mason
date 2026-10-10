@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Awcodes\Mason\Mason;
 use Awcodes\Mason\Support\BrickCommand;
 use Awcodes\Mason\Support\BrickContext;
+use Awcodes\Mason\Support\BrickMigrator;
 use Awcodes\Mason\Support\BrickTree;
 use Awcodes\Mason\Support\Faker;
 use Awcodes\Mason\Support\IframeEntryRenderer;
@@ -19,6 +20,8 @@ use Awcodes\Mason\Tests\Fixtures\LivewireNestedForm;
 use Awcodes\Mason\Tests\Fixtures\RestrictedContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\SimpleBrick;
 use Awcodes\Mason\Tests\Fixtures\TestBrick;
+use Awcodes\Mason\Tests\Fixtures\UnmigratedBrick;
+use Awcodes\Mason\Tests\Fixtures\VersionedBrick;
 use Filament\Actions\Testing\TestAction;
 use Livewire\Livewire;
 use Workbench\App\Models\Page;
@@ -512,5 +515,63 @@ describe('brick context', function () {
         }
 
         expect(BrickContext::values())->toBe([]);
+    });
+});
+
+describe('brick versions', function () {
+    $old = fn (): array => nestedBrick('versioned-brick', ['title' => 'Old', 'intro' => 'Hello'], attrs: ['uid' => 'v']);
+    $bricks = fn (): array => ['versioned-brick' => VersionedBrick::class, 'test-brick' => TestBrick::class, 'container-brick' => ContainerBrick::class];
+
+    it('runs every step from the stored version to the current one', function () use ($old, $bricks) {
+        $brick = BrickMigrator::upgrade([$old()], $bricks())[0];
+
+        expect($brick['attrs'])
+            ->v->toBe(3)
+            ->config->toBe(['heading' => 'Old'])
+            ->and($brick['content'][0]['attrs'])
+            ->uid->toBe(BrickTree::derivedUid('v', 'intro'))
+            ->config->toBe(['title' => 'Hello']);
+    });
+
+    it('starts from the stored version and leaves current bricks alone', function () use ($bricks) {
+        $atTwo = nestedBrick('versioned-brick', ['heading' => 'Kept', 'intro' => 'Hi'], attrs: ['uid' => 'v', 'v' => 2]);
+        $current = nestedBrick('versioned-brick', ['heading' => 'Current'], [], ['v' => 3]);
+        $plain = nestedBrick('test-brick', ['title' => 'Plain']);
+
+        [$fromTwo, $same, $untouched] = BrickMigrator::upgrade([$atTwo, $current, $plain], $bricks());
+
+        expect($fromTwo['attrs']['config'])->toBe(['heading' => 'Kept'])
+            ->and($same)->toBe($current)
+            // Bricks at version 1 get no version stored
+            ->and($untouched)->toBe($plain);
+    });
+
+    it('upgrades bricks inside containers', function () use ($old, $bricks) {
+        $blocks = BrickMigrator::upgrade([nestedBrick('container-brick', [], [$old()])], $bricks());
+
+        expect($blocks[0]['content'][0]['attrs']['config'])->toBe(['heading' => 'Old']);
+    });
+
+    it('fails loudly when a step is missing', function () {
+        BrickMigrator::upgradeBrick(nestedBrick('unmigrated-brick'), UnmigratedBrick::class);
+    })->throws(LogicException::class, 'has no migration from version 1');
+
+    it('derives the same uid for the same parent and name', function () {
+        expect(BrickTree::derivedUid('a', 'intro'))->toBe(BrickTree::derivedUid('a', 'intro'))
+            ->not->toBe(BrickTree::derivedUid('b', 'intro'))
+            ->not->toBe(BrickTree::derivedUid('a', 'other'))
+            ->toHaveLength(26);
+    });
+
+    it('upgrades content when the field loads it and when it is rendered', function () use ($old) {
+        $mason = nestedMason([$old()])->bricks([VersionedBrick::class, TestBrick::class]);
+        $state = $mason->callAfterStateHydrated()->getState();
+
+        expect($state[0]['attrs']['v'])->toBe(3)
+            ->and(MasonRenderer::make([$old()])->bricks([VersionedBrick::class, TestBrick::class])->toUnsafeHtml())
+            ->toContain('data-heading="Old"')
+            ->toContain('Hello')
+            ->and(IframeRenderer::make([$old()])->bricks([VersionedBrick::class, TestBrick::class])->toHtml())
+            ->toContain('data-heading="Old"');
     });
 });

@@ -101,7 +101,7 @@ class IframeEntryRenderer
                 'html' => $html,
                 'label' => $this->getBlockLabel($id),
             ];
-        }, $this->blocks, array_keys($this->blocks));
+        }, $blocks = $this->upgradeBricks($this->blocks), array_keys($blocks));
 
         // Use the provided layout, fallback to config, then default
         $layoutToUse = $layout ?? config('mason.entry.layout');

@@ -83,8 +83,8 @@ class IframeRenderer
     {
         $blocks = array_map(
             fn (array $block, int $index): array => $this->getBlockData($block, (string) $index),
-            $this->blocks,
-            array_keys($this->blocks),
+            $blocks = $this->upgradeBricks($this->blocks),
+            array_keys($blocks),
         );
 
         // Use the provided layout, fallback to config, then default

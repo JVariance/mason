@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Awcodes\Mason;
 
+use Closure;
 use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
@@ -18,6 +19,26 @@ abstract class Brick
             ->kebab()
             ->replace('-', ' ')
             ->ucwords();
+    }
+
+    /**
+     * Version of the brick's stored format. Raise it together with a step in getMigrations() when the format changes,
+     * so that stored bricks are brought up to date (BrickMigrator).
+     */
+    public static function getVersion(): int
+    {
+        return 1;
+    }
+
+    /**
+     * Steps from one version to the next, keyed by the version they start from: [1 => fn (array $brick): array => …].
+     * A step gets the whole stored brick (attrs, config and the bricks inside it) and returns it changed.
+     *
+     * @return array<int, Closure(array<string, mixed>): array<string, mixed>>
+     */
+    public static function getMigrations(): array
+    {
+        return [];
     }
 
     public static function getIcon(): string | Heroicon | Htmlable | null
