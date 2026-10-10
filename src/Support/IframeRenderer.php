@@ -149,11 +149,11 @@ class IframeRenderer
             fn (mixed $child): bool => is_array($child) && ($child['type'] ?? null) === 'masonBrick',
         ));
 
-        $children = array_map(function (array $child, int $index) use ($path, $content): BrickChild {
+        $children = array_map(function (array $child, int $index) use ($block, $path, $content): BrickChild {
             $childPath = ltrim($path . '.' . $index, '.');
 
             return new BrickChild($child, fn (array $values): string => BrickContext::with($values, fn (): string => view('mason::components.preview-block', [
-                'block' => $this->getBlockData($child, $childPath),
+                'block' => $this->getBlockData($child, $childPath, BrickTemplates::entryFor($block, $child, $this->getCachedBricks())),
                 'total' => count($content),
             ])->render()));
         }, $content, array_keys($content));
@@ -182,11 +182,16 @@ class IframeRenderer
      * @param  array<string, mixed>  $block
      * @return array<string, mixed>
      */
-    protected function getBlockData(array $block, string $path): array
+    protected function getBlockData(array $block, string $path, ?BrickTemplate $template = null): array
     {
         $id = $block['attrs']['id'] ?? null;
 
         return [
+            // Locks follow the container's template, not what the browser sent
+            'template' => $template?->key,
+            'removalLocked' => $template?->isRemovalLocked() ?? false,
+            'movementLocked' => $template?->isMovementLocked() ?? false,
+            'hidden' => ($block['attrs']['hidden'] ?? false) === true,
             'index' => (int) str($path)->afterLast('.')->toString(),
             'path' => $path,
             'id' => $id,

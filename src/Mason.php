@@ -8,6 +8,7 @@ use Awcodes\Mason\Actions\BrickAction;
 use Awcodes\Mason\Concerns\HasBricks;
 use Awcodes\Mason\Concerns\HasSidebar;
 use Awcodes\Mason\Support\BrickCommand;
+use Awcodes\Mason\Support\BrickTemplates;
 use Awcodes\Mason\Support\BrickTree;
 use Awcodes\Mason\Support\RenderContext;
 use Closure;
@@ -69,8 +70,9 @@ class Mason extends Field implements CanBeLengthConstrained
                 $state = $state['content'];
             }
 
-            // Older versions of bricks are brought up to date first; bricks a migration adds then get uids
-            $state = BrickTree::ensureUids($component->upgradeBricks($state));
+            // Older versions of bricks are brought up to date first, then bricks from templates are added; all get uids
+            $state = BrickTree::ensureUids(BrickTemplates::ensure($component->upgradeBricks($state), $component->getCachedBricks()));
+            $state = BrickTemplates::annotate($state, $component->getCachedBricks());
 
             if ($component->hasOutline()) {
                 $state = BrickTree::map($state, function (array $block) use ($component): array {
@@ -104,10 +106,13 @@ class Mason extends Field implements CanBeLengthConstrained
             $livewire->validateOnly($component->getStatePath());
         });
 
-        $this->dehydrateStateUsing(function ($state): ?array {
+        $this->dehydrateStateUsing(function (Mason $component, $state): ?array {
             if (! $state || ! is_array($state)) {
                 return null;
             }
+
+            // Bricks a template cannot do without are added again (the editor removes bricks in the browser)
+            $state = BrickTemplates::ensure($state, $component->getCachedBricks());
 
             // Remove preview data before saving; uids are checked once more, so that no two bricks share one
             return BrickTree::map(BrickTree::ensureUids($state), function (array $block): array {
@@ -118,6 +123,7 @@ class Mason extends Field implements CanBeLengthConstrained
                 unset($block['attrs']['label']);
                 unset($block['attrs']['preview']);
                 unset($block['attrs']['outlineLabel']);
+                unset($block['attrs']['lock']);
 
                 return $block;
             });
@@ -174,6 +180,8 @@ class Mason extends Field implements CanBeLengthConstrained
                 default => $state,
             };
         }
+
+        $state = BrickTemplates::annotate($state, $this->getCachedBricks());
 
         $this->state($state);
 
@@ -332,8 +340,8 @@ class Mason extends Field implements CanBeLengthConstrained
             return $state;
         }
 
-        // An inserted brick is a new one, even when it is a copy of another
-        $brick = BrickTree::withNewUids($brick);
+        // An inserted brick is a new one, even when it is a copy of another; a container gets its template's bricks
+        $brick = BrickTree::withNewUids(BrickTemplates::ensure([$brick], $this->getCachedBricks())[0]);
 
         if (BrickTree::parse($parent) !== []) {
             $container = BrickTree::get($state, $parent);
@@ -393,7 +401,8 @@ class Mason extends Field implements CanBeLengthConstrained
     {
         $index = $arguments['index'] ?? null;
 
-        if ($index === null) {
+        // Bricks a template cannot do without can only be hidden
+        if ($index === null || BrickTemplates::locks($state, $index, $this->getCachedBricks())['removal']) {
             return $state;
         }
 
@@ -413,6 +422,10 @@ class Mason extends Field implements CanBeLengthConstrained
         $to = $arguments['to'] ?? null;
 
         if ($from === null || $to === null || BrickTree::get($state, $from) === null) {
+            return $state;
+        }
+
+        if (BrickTemplates::locks($state, $from, $this->getCachedBricks())['movement']) {
             return $state;
         }
 

@@ -124,7 +124,8 @@ class IframeEntryRenderer
      */
     protected function renderBlockHtml(array $block): ?string
     {
-        if (($block['type'] ?? null) !== 'masonBrick') {
+        // Hidden bricks show only in the editor
+        if (($block['type'] ?? null) !== 'masonBrick' || ($block['attrs']['hidden'] ?? false) === true) {
             return null;
         }
 

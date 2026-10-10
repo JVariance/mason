@@ -107,6 +107,36 @@ A container can have several areas, e.g. a header and a body, or slots. It tells
 
 Outside the editor both render nothing. The attribute is stored on the brick (`attrs.area`) and read with `$child->getAttribute('area')`. It never replaces a brick's `id` or `config`.
 
+## Templates and locked bricks
+
+A container can come with bricks inside it, e.g. a heading on top of an accordion. Implement `HasBrickTemplate`:
+
+```php
+use Awcodes\Mason\Contracts\HasBrickTemplate;
+use Awcodes\Mason\Support\BrickTemplate;
+
+class Accordion extends Brick implements HasBrickTemplate
+{
+    public static function getTemplate(): array
+    {
+        return [
+            BrickTemplate::make('heading', Heading::class)
+                ->config(['level' => 'auto'])
+                ->lockRemoval()
+                ->lockMovement(),
+        ];
+    }
+
+    // toHtmlWithChildren(), getAllowedChildren() …
+}
+```
+
+- An inserted container gets the bricks of its template. Each stores the key of its entry (`attrs.template`).
+- `lockRemoval()`: the brick cannot be removed. Instead of delete, the editor offers hide and show (`attrs.hidden`); the renderers leave hidden bricks out, the preview shows them dimmed. If the brick is missing when the content is loaded or saved, it is added again.
+- `lockMovement()`: the brick cannot be moved or dragged.
+- Locks follow the template in the code, never the stored content, so they cannot be forged and change with the code. Locked bricks are marked in the preview.
+- A template only fills a new container. Bricks a template adds later reach existing containers only if they are locked against removal; for anything else, use a [migration](creating.md#changing-the-stored-format).
+
 ## Storage
 
 The bricks inside a container are stored under its `content` key:

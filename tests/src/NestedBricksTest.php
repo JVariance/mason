@@ -17,8 +17,10 @@ use Awcodes\Mason\Tests\Fixtures\ContextBrick;
 use Awcodes\Mason\Tests\Fixtures\LevelContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\LivewireLockedForm;
 use Awcodes\Mason\Tests\Fixtures\LivewireNestedForm;
+use Awcodes\Mason\Tests\Fixtures\LivewireTemplateForm;
 use Awcodes\Mason\Tests\Fixtures\RestrictedContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\SimpleBrick;
+use Awcodes\Mason\Tests\Fixtures\TemplateContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\TestBrick;
 use Awcodes\Mason\Tests\Fixtures\UnmigratedBrick;
 use Awcodes\Mason\Tests\Fixtures\VersionedBrick;
@@ -573,5 +575,84 @@ describe('brick versions', function () {
             ->toContain('Hello')
             ->and(IframeRenderer::make([$old()])->bricks([VersionedBrick::class, TestBrick::class])->toHtml())
             ->toContain('data-heading="Old"');
+    });
+});
+
+describe('brick templates', function () {
+    $bricks = [TemplateContainerBrick::class, TestBrick::class, SimpleBrick::class];
+    $container = fn (?array $content = null): array => nestedBrick('template-container-brick', [], $content, ['uid' => 'box']);
+    $intro = fn (array $attrs = []): array => nestedBrick('test-brick', ['title' => 'Mine'], attrs: ['template' => 'intro', 'uid' => 'i', ...$attrs]);
+    $extra = fn (): array => nestedBrick('simple-brick', attrs: ['template' => 'extra', 'uid' => 'e']);
+    $mason = fn (array $state) => nestedMason($state)->bricks($bricks);
+
+    it('gives an inserted container the bricks of its template', function () use ($mason) {
+        $state = $mason([])->executeCommands([BrickCommand::insertBrick(nestedBrick('template-container-brick'), 0)]);
+
+        expect(array_map(fn (array $child) => $child['attrs']['template'], $state[0]['content']))->toBe(['intro', 'extra'])
+            ->and($state[0]['content'][0]['attrs']['config'])->toBe(['title' => 'Intro'])
+            ->and($state[0]['content'][0]['attrs']['uid'])->toBeString()
+            ->and($state[0]['content'][0]['attrs']['lock'])->toBe(['removal' => true, 'movement' => true])
+            ->and($state[0]['content'][1]['attrs'])->not->toHaveKey('lock');
+    });
+
+    it('refuses to remove or move a locked brick, but not the others', function () use ($mason, $container, $intro, $extra) {
+        $state = $mason([$container([$intro(), $extra()])])->executeCommands([
+            BrickCommand::deleteBrick('0.0'),
+            BrickCommand::moveBrick('0.0', 2, '0'),
+            BrickCommand::deleteBrick('0.1'),
+        ]);
+
+        expect($state[0]['content'])->toHaveCount(1)
+            ->and($state[0]['content'][0]['attrs']['template'])->toBe('intro');
+    });
+
+    it('takes the locks from the code, not from the stored brick', function () use ($mason, $container) {
+        // A forged lock on a free brick protects nothing
+        $forged = nestedBrick('simple-brick', attrs: ['template' => 'extra', 'uid' => 'e', 'lock' => ['removal' => true, 'movement' => true]]);
+
+        $state = $mason([$container([$forged])])->executeCommands([BrickCommand::deleteBrick('0.0')]);
+
+        expect($state[0]['content'] ?? [])->toBe([]);
+    });
+
+    it('adds a locked brick back when it is missing, with a uid derived from the container', function () use ($mason, $container, $extra) {
+        $state = $mason([$container([$extra()])])->callAfterStateHydrated()->getState();
+
+        expect(array_map(fn (array $child) => $child['attrs']['template'], $state[0]['content']))->toBe(['intro', 'extra'])
+            ->and($state[0]['content'][0]['attrs']['uid'])->toBe(BrickTree::derivedUid('box', 'template:intro'));
+    });
+
+    it('saves without the editor locks and with locked bricks the browser removed', function () use ($container, $extra) {
+        Livewire::test(LivewireTemplateForm::class)
+            ->fillForm(['title' => 'Templates', 'content' => [$container([$extra()])]])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $content = Page::query()->first()->content[0]['content'];
+
+        expect(array_map(fn (array $child) => $child['attrs']['template'], $content))->toBe(['intro', 'extra'])
+            ->and($content[0]['attrs'])->not->toHaveKey('lock');
+    });
+
+    it('leaves hidden bricks out on the website and marks them in the preview', function () use ($bricks, $container, $intro, $extra) {
+        $content = [$container([$intro(['hidden' => true]), $extra()])];
+
+        $website = MasonRenderer::make($content)->bricks($bricks)->toUnsafeHtml();
+        $preview = IframeRenderer::make($content)->bricks($bricks)->toHtml();
+        $locked = str($preview)->betweenFirst('data-block-path="0.0"', 'mason-block-content')->toString();
+        $free = str($preview)->betweenFirst('data-block-path="0.1"', 'mason-block-content')->toString();
+
+        expect($website)->not->toContain('Mine')
+            ->and($preview)->toContain('Mine')
+            ->and($locked)
+            ->toContain('data-template="intro"')
+            ->toContain('data-hidden')
+            ->toContain('data-movement-locked')
+            ->toContain('data-action="toggle-hidden"')
+            ->not->toContain('data-action="delete"')
+            ->not->toContain('data-action="move-up"')
+            ->and($free)
+            ->toContain('data-action="delete"')
+            ->toContain('data-action="move-up"');
     });
 });

@@ -465,6 +465,9 @@ export default function masonComponent({
             const siblings = childrenAt(blocks, target.slice(0, -1))
             const index = target.at(-1)
 
+            // Bricks a template cannot do without can only be hidden
+            if (siblings?.[index]?.attrs?.lock?.removal) return
+
             if (siblings && index >= 0 && index < siblings.length) {
                 this.pushToUndoStack(this.captureState())
                 siblings.splice(index, 1)
@@ -563,6 +566,7 @@ export default function masonComponent({
             const target = childrenAt(blocks, parentPath, true)
 
             if (!moved || !target) return null
+            if (moved.attrs?.lock?.movement) return null
             if (toIndex < 0 || toIndex > target.length) return null
 
             const undoState = this.captureState()

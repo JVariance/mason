@@ -84,6 +84,10 @@ A container brick with several areas tells them apart by an attribute of its bri
 
 `Brick::getVersion()` and `Brick::getMigrations()` (`[fromVersion => fn (array $brick): array]`) bring stored bricks up to date. `BrickMigrator::upgrade()` runs the steps; the field runs it on load and the renderers before rendering, the version is stored as `attrs.v` (only above 1). Bricks a step adds get `BrickTree::derivedUid()`.
 
+### Brick Templates
+
+Containers implementing `HasBrickTemplate::getTemplate()` (list of `BrickTemplate`) get those bricks on insert (`attrs.template` = key). `lockRemoval()` / `lockMovement()` follow the code (`BrickTemplates::locks()`): delete and move commands refuse locked bricks, the field adds missing removal-locked bricks on load and save, and marks locks as editor-only `attrs.lock`. Hidden bricks (`attrs.hidden`) are skipped by the website and entry renderers.
+
 ### Brick Context
 
 `BrickContext` tells a brick where it is rendered without changing `toHtml()`'s signature: `uid()` and `attributes()` of the brick being rendered, and `get()` for values a container passed to the bricks inside it (`$children->with([...])`, `$child->with([...])`, or `BrickContext::with([...], fn)` around another renderer). Values reach nested containers' bricks too. The renderers render a container's bricks lazily, when it outputs them, so that its values reach them.

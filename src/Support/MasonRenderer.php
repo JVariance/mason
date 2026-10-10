@@ -149,7 +149,8 @@ class MasonRenderer implements Htmlable
         $html = [];
 
         foreach ($blocks as $block) {
-            if (! is_array($block) || ($block['type'] ?? null) !== 'masonBrick') {
+            // Hidden bricks (e.g. ones a template does not allow to remove) show only in the editor
+            if (! is_array($block) || ($block['type'] ?? null) !== 'masonBrick' || ($block['attrs']['hidden'] ?? false) === true) {
                 continue;
             }
 

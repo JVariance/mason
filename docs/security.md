@@ -19,6 +19,10 @@ The field's state is entangled with the browser. Anyone who can edit a record ca
 
 Drop zones of container areas insert and move bricks with attributes (`dropZone(['slot' => 'a'])`). They come from the browser as well. `BrickAction` never lets them replace `id`, `config`, `uid`, `label`, `preview` or `outlineLabel`; other keys are stored as given. Containers compare these values, they should not output them unescaped.
 
+## Locked bricks in templates
+
+Locks of bricks a container comes with (`HasBrickTemplate`) follow the template in the code. A lock stored with the content is ignored, and a locked brick that is missing is added again when the content is saved. `attrs.hidden` comes from the browser like everything else: it only decides whether a brick is rendered.
+
 ## Locked structure
 
 `lockedStructure()` hides the controls for adding, moving and removing bricks and refuses the matching commands on the server. Deleting and moving happen in the browser, though, so only `comparedTo` makes the lock binding: the structure is validated against it on save.

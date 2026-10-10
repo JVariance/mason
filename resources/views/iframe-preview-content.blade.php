@@ -358,6 +358,17 @@
                         brickId,
                         config,
                     })
+                } else if (actionType === 'toggle-hidden') {
+                    // Bricks a template cannot do without are hidden instead of removed
+                    postToParent({
+                        type: 'updateBlockAttributes',
+                        path,
+                        attrs: {
+                            hidden: block.hasAttribute('data-hidden')
+                                ? null
+                                : true,
+                        },
+                    })
                 } else if (actionType === 'delete') {
                     postToParent({
                         type: 'deleteBlockRequest',
@@ -506,8 +517,11 @@
                 return
             }
 
-            // Prevent dragging if clicking on controls (but allow drag handle)
-            if (e.target.closest('.mason-block-controls')) {
+            // Prevent dragging if clicking on controls (but allow drag handle), and bricks a template keeps in place
+            if (
+                e.target.closest('.mason-block-controls') ||
+                block.hasAttribute('data-movement-locked')
+            ) {
                 e.preventDefault()
                 return
             }

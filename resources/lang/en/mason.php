@@ -27,6 +27,10 @@ return [
         'add' => 'Add Brick',
         'edit' => 'Edit',
         'delete' => 'Delete',
+        'hide' => 'Hide',
+        'show' => 'Show',
+        'hidden' => 'Hidden',
+        'template' => 'Part of this brick',
     ],
     'brick_picker' => [
         'title' => 'Add Brick',
