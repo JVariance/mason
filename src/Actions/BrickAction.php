@@ -9,6 +9,7 @@ use Awcodes\Mason\Support\BrickCommand;
 use Awcodes\Mason\Support\BrickTree;
 use Filament\Actions\Action;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\Arr;
 
 class BrickAction
 {
@@ -76,6 +77,14 @@ class BrickAction
                     ]);
 
                     return;
+                }
+
+                // Attributes of the drop zone, e.g. the slot of a container; never the brick's own ones
+                if (is_array($arguments['attrs'] ?? null)) {
+                    $brickContent['attrs'] = [
+                        ...Arr::except($arguments['attrs'], ['id', 'config', 'uid', 'label', 'preview', 'outlineLabel']),
+                        ...$brickContent['attrs'],
+                    ];
                 }
 
                 // Insert into a container brick, or at the top level without a parent

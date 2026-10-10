@@ -76,6 +76,10 @@ Mason stores content as JSON arrays. Each brick entry has:
 - `attrs.uid`: A lasting reference to the brick (`BrickTree::ensureUids()` on load and save). It stays when the brick is edited or moved; an inserted brick, e.g. a copy, gets a new one
 - `attrs.preview` and `attrs.label`: Stripped before saving (editor-only)
 
+### Container Areas
+
+A container brick with several areas tells them apart by an attribute of its bricks (e.g. `attrs.slot`). In `toHtmlWithChildren()`, `$children->where('slot', 'a')` gives an area's bricks, `$children->dropZone(['slot' => 'a'])` a drop zone that inserts with that attribute (passed to `BrickAction` as `attrs`), and `$children->dropTarget(['slot' => 'a'])` the attributes for the element around the area, so that bricks dropped next to its bricks or moved into it get the attribute as well. Outside the editor both are empty.
+
 ### Locked Structure
 
 `->lockedStructure($condition, comparedTo: $content)` keeps bricks editable but stops adding, moving and removing them: the editor hides those controls, `executeCommands()` skips insert, move and delete, and with `comparedTo` a validation rule checks the saved structure (`BrickTree::hasSameStructure()`), as the editor deletes and moves bricks in the browser.

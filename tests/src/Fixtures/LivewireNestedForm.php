@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Awcodes\Mason\Tests\Fixtures;
 
 use Awcodes\Mason\Mason;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Workbench\App\Models\Page;
 
-class LivewireNestedForm extends LivewireForm
+class LivewireNestedForm extends LivewireForm implements HasActions
 {
+    use InteractsWithActions;
+
     public function form(Schema $schema): Schema
     {
         return $schema

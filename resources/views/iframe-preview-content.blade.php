@@ -85,6 +85,31 @@
             )
         }
 
+        function parseAttrs(element) {
+            try {
+                return JSON.parse(
+                    element?.getAttribute('data-drop-attrs') || 'null',
+                )
+            } catch {
+                return null
+            }
+        }
+
+        // Attributes of the area of its container a brick sits in, e.g. a slot (BrickChildren::dropTarget())
+        function areaAttrs(block, parent) {
+            let area = block.parentElement?.closest('[data-drop-target]')
+
+            while (area) {
+                if ((area.getAttribute('data-drop-parent') ?? '') === parent) {
+                    return parseAttrs(area)
+                }
+
+                area = area.parentElement?.closest('[data-drop-target]')
+            }
+
+            return null
+        }
+
         // Whether the brick may be placed in the parent; the top level takes every brick
         function accepts(parent, brickId) {
             if (parent === '') return true
@@ -307,6 +332,7 @@
                     type: 'openBrickPicker',
                     parent: zone.getAttribute('data-drop-parent') ?? '',
                     index: parseInt(zone.getAttribute('data-drop-index')),
+                    attrs: parseAttrs(zone),
                 })
 
                 return
@@ -360,6 +386,7 @@
                     postToParent({
                         type: 'openBrickPicker',
                         path,
+                        attrs: areaAttrs(block, parentOf(path)),
                     })
                 }
             } else {
@@ -405,6 +432,7 @@
                 return {
                     parent: zone.getAttribute('data-drop-parent') ?? '',
                     index: parseInt(zone.getAttribute('data-drop-index')),
+                    attrs: parseAttrs(zone),
                     zone,
                 }
             }
@@ -420,6 +448,7 @@
             return {
                 parent: parentOf(path),
                 index: indexOf(path) + (after ? 1 : 0),
+                attrs: areaAttrs(block, parentOf(path)),
                 block,
                 after,
             }
@@ -437,8 +466,17 @@
 
             if (target.parent === parentOf(draggedPath)) {
                 const index = indexOf(draggedPath)
+                const sameArea =
+                    JSON.stringify(target.attrs ?? null) ===
+                    JSON.stringify(
+                        areaAttrs(draggedBlock, parentOf(draggedPath)) ?? null,
+                    )
 
-                return target.index !== index && target.index !== index + 1
+                // Into another area (e.g. another slot) a brick may stay at its index
+                return (
+                    !sameArea ||
+                    (target.index !== index && target.index !== index + 1)
+                )
             }
 
             return true
@@ -559,6 +597,7 @@
                         from: draggedPath,
                         toParent: target.parent,
                         toIndex: target.index,
+                        attrs: target.attrs,
                     })
                 }
 
@@ -577,6 +616,7 @@
                     brickId,
                     parent: target.parent,
                     position: target.index,
+                    attrs: target.attrs,
                 })
             }
         })

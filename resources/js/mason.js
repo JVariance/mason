@@ -36,6 +36,25 @@ function childrenAt(blocks, path, create = false) {
     return children
 }
 
+// Attributes of a drop zone for a brick placed there, e.g. the slot of a container;
+// never the brick's own ones. Returns whether anything changed.
+function applyAreaAttrs(block, attrs) {
+    if (!attrs || typeof attrs !== 'object') return false
+
+    let changed = false
+    block.attrs = block.attrs ?? {}
+
+    Object.entries(attrs).forEach(([key, value]) => {
+        if (['id', 'config', 'uid', 'label', 'preview'].includes(key)) return
+        if (JSON.stringify(block.attrs[key]) === JSON.stringify(value)) return
+
+        block.attrs[key] = value
+        changed = true
+    })
+
+    return changed
+}
+
 function findPath(blocks, node, prefix = []) {
     for (let index = 0; index < blocks.length; index++) {
         const block = blocks[index]
@@ -133,6 +152,7 @@ export default function masonComponent({
                             data.brickId,
                             data.position,
                             data.parent ?? '',
+                            data.attrs ?? null,
                         )
                         break
                     case 'updateBlockAttributes':
@@ -154,16 +174,23 @@ export default function masonComponent({
                             data.from,
                             data.toParent ?? '',
                             data.toIndex,
+                            data.attrs ?? null,
                         )
                         break
                     case 'openBrickPicker':
                         this.openBrickPicker(
                             data.path !== undefined ||
                                 data.blockIndex !== undefined
-                                ? { path: String(data.path ?? data.blockIndex) }
+                                ? {
+                                      path: String(
+                                          data.path ?? data.blockIndex,
+                                      ),
+                                      attrs: data.attrs ?? null,
+                                  }
                                 : {
                                       parent: data.parent ?? '',
                                       index: data.index,
+                                      attrs: data.attrs ?? null,
                                   },
                         )
                         break
@@ -384,7 +411,7 @@ export default function masonComponent({
             }
         },
 
-        async handleInsertBlock(brickId, position, parent = '') {
+        async handleInsertBlock(brickId, position, parent = '', attrs = null) {
             if (structureLocked) return
 
             this.isInsertingBrick = true
@@ -393,7 +420,13 @@ export default function masonComponent({
             try {
                 await this.$wire.mountAction(
                     'handleBrick',
-                    { id: brickId, parent, position, mode: 'insert' },
+                    {
+                        id: brickId,
+                        parent,
+                        position,
+                        mode: 'insert',
+                        ...(attrs ? { attrs } : {}),
+                    },
                     { schemaComponent: key },
                 )
                 this.pushToUndoStack(preInsertState)
@@ -500,8 +533,8 @@ export default function masonComponent({
         },
 
         // toIndex is a drop position: it counts the target's bricks before the moved one is taken out
-        handleMoveBlock(from, toParent, toIndex) {
-            if (this.moveBlock(from, toParent, toIndex) === null) return
+        handleMoveBlock(from, toParent, toIndex, attrs = null) {
+            if (this.moveBlock(from, toParent, toIndex, attrs) === null) return
 
             // Update move buttons in iframe after move completes
             setTimeout(() => {
@@ -509,8 +542,9 @@ export default function masonComponent({
             }, 150)
         },
 
-        // Returns the moved brick's new path, or null if nothing moved
-        moveBlock(from, toParent, toIndex) {
+        // Returns the moved brick's new path, or null if nothing moved. attrs are
+        // those of the drop zone, e.g. another slot of the same container
+        moveBlock(from, toParent, toIndex, attrs = null) {
             if (structureLocked) return null
 
             const blocks = this.getBlocksFromState()
@@ -529,14 +563,24 @@ export default function masonComponent({
 
             if (!moved || !target) return null
             if (toIndex < 0 || toIndex > target.length) return null
+
+            const undoState = this.captureState()
+
             if (
                 source === target &&
                 (toIndex === fromIndex || toIndex === fromIndex + 1)
             ) {
-                return null
+                // Same place, but maybe another area of the container
+                if (!applyAreaAttrs(moved, attrs)) return null
+
+                this.pushToUndoStack(undoState)
+                this.updateStateFromBlocks(blocks)
+
+                return findPath(blocks, moved).join('.')
             }
 
-            this.pushToUndoStack(this.captureState())
+            this.pushToUndoStack(undoState)
+            applyAreaAttrs(moved, attrs)
 
             // Hold the old place while inserting, so that no index shifts underneath
             const placeholder = {}
@@ -913,9 +957,15 @@ export default function masonComponent({
                     brickId,
                     this.brickPickerPosition === 'above' ? index : index + 1,
                     path.slice(0, -1).join('.'),
+                    target.attrs ?? null,
                 )
             } else {
-                this.handleInsertBlock(brickId, target.index, target.parent)
+                this.handleInsertBlock(
+                    brickId,
+                    target.index,
+                    target.parent,
+                    target.attrs ?? null,
+                )
             }
 
             this.closeBrickPicker()
