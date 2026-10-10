@@ -30,8 +30,6 @@ The preview and entry render in an iframe fed by a separate request.
 - The bricks, the layout and the preview data (`previewData()`) travel in a signed render context. A client can replay it, but cannot change it. It is signed, not encrypted: preview data is readable in the page, so it must hold nothing secret.
 - The entry's render data (`MasonEntry::data()`) is encrypted, models are reduced to class and key.
 
-## Known issue: messages between editor and iframe
+## Messages between editor and iframe
 
-The editor and its iframe talk via `postMessage` and do not check where a message comes from (`event.origin` / `event.source`). Another window that holds a reference to the admin window, e.g. a page opened from it without `rel="noopener"`, or a page that frames the admin, can send editor commands: delete, move or reorder bricks, change their attributes, open the brick picker. Nothing is saved until the user saves, and new content always goes through the brick's form.
-
-Planned fix: the editor accepts messages only from its own iframe (`event.source === iframe.contentWindow`), the iframe only from its parent (`event.source === window.parent`). Until then, keep the admin from being framed (`X-Frame-Options` / `frame-ancestors`) and open external links with `rel="noopener"`.
+The editor and its iframe talk via `postMessage`. The editor handles only messages from its own iframe (`event.source === iframe.contentWindow`), the iframe only those from the window around it (`event.source === window.parent`), so other windows that can reach the admin, e.g. a page opened from it, cannot send editor commands.
