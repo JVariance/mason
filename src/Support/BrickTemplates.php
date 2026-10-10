@@ -81,6 +81,22 @@ class BrickTemplates
             }
 
             $content = is_array($block['content']) ? array_values($block['content']) : [];
+            $seen = [];
+
+            // One brick per template entry: later ones with the same key become ordinary bricks (removable, no data lost)
+            foreach ($content as $index => $child) {
+                $key = is_array($child) ? $child['attrs']['template'] ?? null : null;
+
+                if (! is_string($key)) {
+                    continue;
+                }
+
+                if (isset($seen[$key])) {
+                    unset($content[$index]['attrs']['template']);
+                }
+
+                $seen[$key] = true;
+            }
 
             foreach ($template as $position => $entry) {
                 $present = collect($content)->contains(fn (mixed $child): bool => is_array($child) && static::entryFor($block, $child, $bricks)?->key === $entry->key);

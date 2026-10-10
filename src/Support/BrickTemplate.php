@@ -108,6 +108,11 @@ final class BrickTemplate
             'template' => $this->key,
         ];
 
+        // A brick from a template is new, so it is at the current version of its brick
+        if ($this->brick::getVersion() > 1) {
+            $attrs['v'] = $this->brick::getVersion();
+        }
+
         if ($containerUid !== null && $containerUid !== '') {
             $attrs['uid'] = BrickTree::derivedUid($containerUid, 'template:' . $this->key);
         }

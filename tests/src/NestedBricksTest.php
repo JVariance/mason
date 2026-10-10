@@ -565,6 +565,14 @@ describe('brick versions', function () {
             ->toHaveLength(26);
     });
 
+    it('marks inserted bricks with the current version, so that they are not upgraded again', function () use ($bricks) {
+        $mason = nestedMason([])->bricks([VersionedBrick::class, TestBrick::class]);
+        $state = $mason->executeCommands([BrickCommand::insertBrick(nestedBrick('versioned-brick', ['heading' => 'New']), 0)]);
+
+        expect($state[0]['attrs']['v'])->toBe(3)
+            ->and(BrickMigrator::upgrade($state, $bricks())[0]['content'] ?? [])->toBe([]);
+    });
+
     it('upgrades content when the field loads it and when it is rendered', function () use ($old) {
         $mason = nestedMason([$old()])->bricks([VersionedBrick::class, TestBrick::class]);
         $state = $mason->callAfterStateHydrated()->getState();
@@ -632,6 +640,15 @@ describe('brick templates', function () {
 
         expect(array_map(fn (array $child) => $child['attrs']['template'], $content))->toBe(['intro', 'extra'])
             ->and($content[0]['attrs'])->not->toHaveKey('lock');
+    });
+
+    it('keeps one brick per template entry; a second one becomes an ordinary brick', function () use ($mason, $container, $intro) {
+        $state = $mason([$container([$intro(), $intro(['uid' => 'i2'])])])->callAfterStateHydrated()->getState();
+
+        expect($state[0]['content'])->toHaveCount(2)
+            ->and($state[0]['content'][0]['attrs']['template'])->toBe('intro')
+            ->and($state[0]['content'][1]['attrs'])->not->toHaveKey('template')
+            ->and($state[0]['content'][1]['attrs'])->not->toHaveKey('lock');
     });
 
     it('leaves hidden bricks out on the website and marks them in the preview', function () use ($bricks, $container, $intro, $extra) {

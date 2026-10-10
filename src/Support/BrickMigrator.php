@@ -57,6 +57,26 @@ class BrickMigrator
     }
 
     /**
+     * Marks new bricks with the current version of their brick, so that they are not taken for old ones.
+     *
+     * @param  array<int, mixed>  $blocks
+     * @param  array<string, class-string<Brick>>  $bricks
+     * @return array<int, mixed>
+     */
+    public static function stamp(array $blocks, array $bricks): array
+    {
+        return BrickTree::map($blocks, function (array $block) use ($bricks): array {
+            $brick = $bricks[$block['attrs']['id'] ?? ''] ?? null;
+
+            if ($brick !== null && $brick::getVersion() > 1 && ! isset($block['attrs']['v'])) {
+                $block['attrs']['v'] = $brick::getVersion();
+            }
+
+            return $block;
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $block
      */
     public static function version(array $block): int

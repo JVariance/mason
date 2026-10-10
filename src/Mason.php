@@ -8,6 +8,7 @@ use Awcodes\Mason\Actions\BrickAction;
 use Awcodes\Mason\Concerns\HasBricks;
 use Awcodes\Mason\Concerns\HasSidebar;
 use Awcodes\Mason\Support\BrickCommand;
+use Awcodes\Mason\Support\BrickMigrator;
 use Awcodes\Mason\Support\BrickTemplates;
 use Awcodes\Mason\Support\BrickTree;
 use Awcodes\Mason\Support\RenderContext;
@@ -341,7 +342,8 @@ class Mason extends Field implements CanBeLengthConstrained
         }
 
         // An inserted brick is a new one, even when it is a copy of another; a container gets its template's bricks
-        $brick = BrickTree::withNewUids(BrickTemplates::ensure([$brick], $this->getCachedBricks())[0]);
+        // It is new, so it is at the current version of its brick, and so are the bricks inside it
+        $brick = BrickTree::withNewUids(BrickMigrator::stamp(BrickTemplates::ensure([$brick], $this->getCachedBricks()), $this->getCachedBricks())[0]);
 
         if (BrickTree::parse($parent) !== []) {
             $container = BrickTree::get($state, $parent);
