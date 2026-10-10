@@ -56,6 +56,20 @@ Every brick gets a uid in `attrs.uid`, a lasting reference to it. Paths and inde
 
 Use it to keep data about a brick elsewhere, e.g. translations or per-page overrides of shared content. `BrickTree::ensureUids()` gives content uids outside the field, `BrickTree::newUid()` makes one.
 
+## Locked structure
+
+`lockedStructure()` keeps every brick editable, but stops authors from adding, moving or removing bricks, e.g. for a translation that has to keep the structure of its source:
+
+```php
+Mason::make('content')
+    ->lockedStructure(
+        fn (?Post $record): bool => $record?->isTranslation() ?? false,
+        comparedTo: fn (?Post $record): ?array => $record?->content,
+    );
+```
+
+The editor hides the brick list, the drag handles, the drop zones and the move, add, delete and clear all buttons, and the field refuses insert, move and delete commands. Deleting and moving happen in the browser, though, so pass `comparedTo` to make the lock binding: on save, the field's content must have the same structure as that content — the same bricks in the same places, compared by id and [uid](#brick-uids). Configs may differ.
+
 ## Preview layout
 
 The editor renders inside an iframe, so it needs a layout carrying your application's styles. Without one the editor shows unstyled content that looks nothing like the front end.

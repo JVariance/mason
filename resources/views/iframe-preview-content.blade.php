@@ -43,6 +43,7 @@
         let selectedBlock = null
         let dblClickToEdit = false
         let isDisabled = false
+        let structureLocked = false
         let instanceId = null // Store instance ID for multi-instance support
 
         // Helper to send messages back to parent with instanceId
@@ -119,6 +120,7 @@
                     }
 
                     shouldBeDisabled(data)
+                    lockStructure(data)
 
                     updateContent(data.blocks)
                     break
@@ -128,6 +130,7 @@
                     }
 
                     shouldBeDisabled(data)
+                    lockStructure(data)
                     break
                 case 'selectBlock':
                     selectBlock(String(data.path), data.scroll)
@@ -197,6 +200,39 @@
             } else {
                 container.style.pointerEvents = ''
             }
+        }
+
+        // Bricks can be edited, but not added, moved or removed: their controls and the drop zones are hidden.
+        // The style lives here so that it applies with any preview layout.
+        function lockStructure(data) {
+            if (data.structureLocked === undefined) return
+
+            structureLocked = data.structureLocked
+            container.classList.toggle(
+                'mason-structure-locked',
+                structureLocked,
+            )
+
+            if (!document.getElementById('mason-structure-locked-style')) {
+                const style = document.createElement('style')
+                style.id = 'mason-structure-locked-style'
+                style.textContent = `
+                    .mason-structure-locked .mason-drop-zone,
+                    .mason-structure-locked .mason-block-controls [data-action="move-up"],
+                    .mason-structure-locked .mason-block-controls [data-action="move-down"],
+                    .mason-structure-locked .mason-block-controls [data-action="add"],
+                    .mason-structure-locked .mason-block-controls [data-action="delete"] {
+                        display: none !important;
+                    }
+                `
+                document.head.appendChild(style)
+            }
+
+            container
+                .querySelectorAll('.mason-block')
+                .forEach((block) =>
+                    block.setAttribute('draggable', String(!structureLocked)),
+                )
         }
 
         function selectBlock(path, scroll = false) {
@@ -427,6 +463,11 @@
             const block = e.target.closest('.mason-block')
             if (!block) return
 
+            if (structureLocked) {
+                e.preventDefault()
+                return
+            }
+
             // Prevent dragging if clicking on controls (but allow drag handle)
             if (e.target.closest('.mason-block-controls')) {
                 e.preventDefault()
@@ -470,6 +511,11 @@
 
             clearDropIndicators()
 
+            if (structureLocked) {
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'
+                return
+            }
+
             const target = resolveDropTarget(e)
             const brickId = draggedBlock?.getAttribute('data-brick-id')
 
@@ -499,6 +545,8 @@
             e.stopPropagation()
 
             clearDropIndicators()
+
+            if (structureLocked) return
 
             const target = resolveDropTarget(e)
 

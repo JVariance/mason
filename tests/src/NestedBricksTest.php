@@ -10,6 +10,7 @@ use Awcodes\Mason\Support\IframeEntryRenderer;
 use Awcodes\Mason\Support\IframeRenderer;
 use Awcodes\Mason\Support\MasonRenderer;
 use Awcodes\Mason\Tests\Fixtures\ContainerBrick;
+use Awcodes\Mason\Tests\Fixtures\LivewireLockedForm;
 use Awcodes\Mason\Tests\Fixtures\LivewireNestedForm;
 use Awcodes\Mason\Tests\Fixtures\RestrictedContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\SimpleBrick;
@@ -353,5 +354,66 @@ describe('brick uids', function () {
             ->assertHasNoFormErrors();
 
         expect(Page::query()->first()->content[0]['attrs']['uid'])->toBe('saved');
+    });
+});
+
+describe('locked structure', function () {
+    $content = fn (): array => [
+        nestedBrick('test-brick', ['title' => 'A'], attrs: ['uid' => 'a']),
+        nestedBrick('container-brick', [], [nestedBrick('simple-brick', attrs: ['uid' => 'c'])], ['uid' => 'b']),
+    ];
+
+    it('compares structures by brick ids and uids', function () use ($content) {
+        $changed = $content();
+        $changed[0]['attrs']['config']['title'] = 'Changed';
+        $withoutUid = $content();
+        unset($withoutUid[1]['content'][0]['attrs']['uid']);
+
+        expect(BrickTree::hasSameStructure($content(), $changed))->toBeTrue()
+            ->and(BrickTree::hasSameStructure($content(), $withoutUid))->toBeTrue()
+            ->and(BrickTree::hasSameStructure($content(), array_reverse($content())))->toBeFalse()
+            ->and(BrickTree::hasSameStructure($content(), [$content()[0]]))->toBeFalse()
+            ->and(BrickTree::hasSameStructure($content(), BrickTree::insert($content(), '1', 0, nestedBrick('simple-brick'))))->toBeFalse();
+
+        $otherUid = $content();
+        $otherUid[0]['attrs']['uid'] = 'x';
+
+        expect(BrickTree::hasSameStructure($content(), $otherUid))->toBeFalse();
+    });
+
+    it('edits bricks but does not add, move or remove them', function () use ($content) {
+        $mason = nestedMason($content())->lockedStructure();
+
+        $state = $mason->executeCommands([
+            BrickCommand::insertBrick(nestedBrick('simple-brick'), 0),
+            BrickCommand::moveBrick(0, 0, '1'),
+            BrickCommand::deleteBrick('1.0'),
+            BrickCommand::updateBrick(0, nestedBrick('test-brick', ['title' => 'New'])),
+        ]);
+
+        expect(withoutUids($state))->toBe(withoutUids([
+            nestedBrick('test-brick', ['title' => 'New']),
+            ...array_slice($content(), 1),
+        ]));
+    });
+
+    it('saves edited bricks', function () use ($content) {
+        Livewire::test(LivewireLockedForm::class, ['reference' => $content()])
+            ->set('data.title', 'Locked')
+            ->set('data.content.0.attrs.config.title', 'Changed')
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        expect(Page::query()->first()->content[0]['attrs']['config']['title'])->toBe('Changed');
+    });
+
+    it('refuses a changed structure on save', function () use ($content) {
+        Livewire::test(LivewireLockedForm::class, ['reference' => $content()])
+            ->set('data.title', 'Locked')
+            ->set('data.content', array_reverse($content()))
+            ->call('create')
+            ->assertHasFormErrors(['content']);
+
+        expect(Page::query()->count())->toBe(0);
     });
 });

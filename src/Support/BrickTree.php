@@ -191,6 +191,46 @@ class BrickTree
     }
 
     /**
+     * Whether both hold the same bricks in the same places: the same brick ids at every level, and the same uids
+     * where both have one. Configs and other attributes may differ.
+     *
+     * @param  array<int, mixed>  $blocks
+     * @param  array<int, mixed>  $other
+     */
+    public static function hasSameStructure(array $blocks, array $other): bool
+    {
+        $blocks = array_values(array_filter($blocks, is_array(...)));
+        $other = array_values(array_filter($other, is_array(...)));
+
+        if (count($blocks) !== count($other)) {
+            return false;
+        }
+
+        foreach ($blocks as $index => $block) {
+            $match = $other[$index];
+            $uid = $block['attrs']['uid'] ?? null;
+            $matchUid = $match['attrs']['uid'] ?? null;
+
+            if (($block['attrs']['id'] ?? null) !== ($match['attrs']['id'] ?? null)) {
+                return false;
+            }
+
+            if (filled($uid) && filled($matchUid) && $uid !== $matchUid) {
+                return false;
+            }
+
+            if (! static::hasSameStructure(
+                is_array($block['content'] ?? null) ? $block['content'] : [],
+                is_array($match['content'] ?? null) ? $match['content'] : [],
+            )) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Calls the callback for every brick, parents before their children.
      *
      * @param  array<int, mixed>  $blocks

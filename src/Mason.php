@@ -39,6 +39,13 @@ class Mason extends Field implements CanBeLengthConstrained
 
     protected bool | Closure $showColorModeToggle = false;
 
+    protected bool | Closure $isStructureLocked = false;
+
+    /**
+     * @var array<int, mixed> | Closure | null
+     */
+    protected array | Closure | null $lockedStructureReference = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -76,6 +83,16 @@ class Mason extends Field implements CanBeLengthConstrained
 
             $component->state($state);
         });
+
+        // The editor adds, moves and removes bricks in the browser, so a locked structure is checked again on save
+        $this->rule(
+            fn (Mason $component): Closure => function (string $attribute, mixed $value, Closure $fail) use ($component): void {
+                if (! BrickTree::hasSameStructure(is_array($value) ? $value : [], $component->getLockedStructureReference() ?? [])) {
+                    $fail(__('mason::mason.validation.locked_structure'));
+                }
+            },
+            fn (Mason $component): bool => $component->isStructureLocked() && $component->getLockedStructureReference() !== null,
+        );
 
         $this->afterStateUpdated(function (Mason $component, Component $livewire): void {
             $livewire->validateOnly($component->getStatePath());
@@ -139,6 +156,10 @@ class Mason extends Field implements CanBeLengthConstrained
         }
 
         foreach ($commands as $command) {
+            if ($this->isStructureLocked() && in_array($command->name, ['insertBrick', 'deleteBrick', 'moveBrick'], true)) {
+                continue;
+            }
+
             $state = match ($command->name) {
                 'insertBrick' => $this->executeInsertBrick($state, $command->arguments),
                 'updateBrick' => $this->executeUpdateBrick($state, $command->arguments),
@@ -151,6 +172,35 @@ class Mason extends Field implements CanBeLengthConstrained
         $this->state($state);
 
         return $state;
+    }
+
+    /**
+     * Bricks can still be edited, but not added, moved or removed. Given the content whose structure must be kept
+     * (e.g. the saved state), a changed structure also fails validation.
+     *
+     * @param  array<int, mixed> | Closure | null  $comparedTo
+     */
+    public function lockedStructure(bool | Closure $condition = true, array | Closure | null $comparedTo = null): static
+    {
+        $this->isStructureLocked = $condition;
+        $this->lockedStructureReference = $comparedTo;
+
+        return $this;
+    }
+
+    public function isStructureLocked(): bool
+    {
+        return (bool) $this->evaluate($this->isStructureLocked);
+    }
+
+    /**
+     * @return array<int, mixed>|null
+     */
+    public function getLockedStructureReference(): ?array
+    {
+        $reference = $this->evaluate($this->lockedStructureReference);
+
+        return is_array($reference) ? $reference : null;
     }
 
     public function doubleClickToEdit(bool | Closure $condition = true): static

@@ -402,3 +402,12 @@
         }
     }
 }
+
+/* Bricks can be edited, but not added, moved or removed */
+.mason-wrapper.mason-structure-locked {
+    .mason-actions,
+    .mason-sidebar-tabs,
+    .mason-outline-handle {
+        @apply hidden!;
+    }
+}

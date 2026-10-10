@@ -63,6 +63,8 @@ export default function masonComponent({
     defaultColorMode = 'light',
     hasColorModeToggle = false,
     outlineBricks = {},
+    // Bricks can be edited, but not added, moved or removed
+    structureLocked = false,
 }) {
     let iframe = null
     let eventListeners = []
@@ -78,7 +80,9 @@ export default function masonComponent({
         fullscreen: false,
         viewport: 'desktop',
         sidebarOpen: true,
-        sidebarTab: 'bricks',
+        // The brick list is hidden while the structure is locked
+        sidebarTab: structureLocked ? 'outline' : 'bricks',
+        structureLocked: structureLocked,
         outlineSheetOpen: false,
         selectedBlockPath: null,
         colorMode: hasColorModeToggle
@@ -271,6 +275,7 @@ export default function masonComponent({
                     blocks: this.getBlocksFromState(),
                     dblClickToEdit: dblClickToEdit,
                     disabled: disabled,
+                    structureLocked: structureLocked,
                 })
 
                 // Send initial color mode to iframe
@@ -345,6 +350,7 @@ export default function masonComponent({
                 type: 'setConfig',
                 dblClickToEdit: dblClickToEdit,
                 disabled: disabled,
+                structureLocked: structureLocked,
             })
         },
 
@@ -376,6 +382,8 @@ export default function masonComponent({
         },
 
         async handleInsertBlock(brickId, position, parent = '') {
+            if (structureLocked) return
+
             this.isInsertingBrick = true
             const preInsertState = this.captureState()
 
@@ -413,6 +421,8 @@ export default function masonComponent({
         },
 
         handleDeleteBlock(path) {
+            if (structureLocked) return
+
             const blocks = this.getBlocksFromState()
             const target = toPath(path)
             const siblings = childrenAt(blocks, target.slice(0, -1))
@@ -498,6 +508,8 @@ export default function masonComponent({
 
         // Returns the moved brick's new path, or null if nothing moved
         moveBlock(from, toParent, toIndex) {
+            if (structureLocked) return null
+
             const blocks = this.getBlocksFromState()
             const fromPath = toPath(from)
             const parentPath = toPath(toParent)
@@ -598,7 +610,7 @@ export default function masonComponent({
         },
 
         initOutline(list) {
-            if (!window.Sortable) {
+            if (!window.Sortable || structureLocked) {
                 return
             }
 
@@ -875,6 +887,8 @@ export default function masonComponent({
         },
 
         openBrickPicker(target) {
+            if (structureLocked) return
+
             this.brickPickerTarget = target
             this.brickPickerOpen = true
         },
@@ -956,6 +970,8 @@ export default function masonComponent({
         },
 
         clearAllBlocks() {
+            if (structureLocked) return
+
             if (this.state && this.state.length > 0) {
                 this.pushToUndoStack(this.captureState())
             }

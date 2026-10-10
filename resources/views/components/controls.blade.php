@@ -103,6 +103,7 @@
     <x-filament::icon-button
         color="gray"
         x-on:click="clearAllBlocks()"
+        x-show="! structureLocked"
         size="sm"
         title="Clear all blocks"
     >
