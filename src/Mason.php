@@ -57,6 +57,8 @@ class Mason extends Field implements CanBeLengthConstrained
                 $state = $state['content'];
             }
 
+            $state = BrickTree::ensureUids($state);
+
             if ($component->hasOutline()) {
                 $state = BrickTree::map($state, function (array $block) use ($component): array {
                     if (($block['type'] ?? null) !== 'masonBrick') {
@@ -84,8 +86,8 @@ class Mason extends Field implements CanBeLengthConstrained
                 return null;
             }
 
-            // Remove preview data before saving
-            return BrickTree::map($state, function (array $block): array {
+            // Remove preview data before saving; uids are checked once more, so that no two bricks share one
+            return BrickTree::map(BrickTree::ensureUids($state), function (array $block): array {
                 if (($block['type'] ?? null) !== 'masonBrick') {
                     return $block;
                 }
@@ -251,6 +253,9 @@ class Mason extends Field implements CanBeLengthConstrained
             return $state;
         }
 
+        // An inserted brick is a new one, even when it is a copy of another
+        $brick = BrickTree::withNewUids($brick);
+
         if (BrickTree::parse($parent) !== []) {
             $container = BrickTree::get($state, $parent);
 
@@ -290,6 +295,11 @@ class Mason extends Field implements CanBeLengthConstrained
         // Nor the attributes set from elsewhere, e.g. layout data its container keeps on it
         if (is_array($current['attrs'] ?? null) && is_array($brick['attrs'] ?? null)) {
             $brick['attrs'] = [...$current['attrs'], ...$brick['attrs']];
+        }
+
+        // The brick stays the same brick
+        if (filled($current['attrs']['uid'] ?? null)) {
+            $brick['attrs']['uid'] = $current['attrs']['uid'];
         }
 
         return BrickTree::update($state, $index, $brick);

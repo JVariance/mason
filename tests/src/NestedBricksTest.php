@@ -284,6 +284,74 @@ describe('Mason commands on nested bricks', function () {
         $content = Page::query()->first()->content;
 
         expect($content[0]['attrs'])->not->toHaveKey('label')
-            ->and($content[0]['content'][0]['attrs'])->toBe(['id' => 'simple-brick', 'config' => []]);
+            ->and(withoutUids($content)[0]['content'][0]['attrs'])->toBe(['id' => 'simple-brick', 'config' => []]);
+    });
+});
+
+describe('brick uids', function () {
+    it('gives every brick a uid when the content is loaded', function () {
+        $mason = nestedMason([
+            nestedBrick('container-brick', [], [nestedBrick('simple-brick')]),
+            nestedBrick('test-brick', attrs: ['uid' => 'kept']),
+        ]);
+
+        $state = $mason->callAfterStateHydrated()->getState();
+
+        expect($state[0]['attrs']['uid'])->toBeString()->not->toBeEmpty()
+            ->and($state[0]['content'][0]['attrs']['uid'])->toBeString()->not->toBe($state[0]['attrs']['uid'])
+            ->and($state[1]['attrs']['uid'])->toBe('kept');
+    });
+
+    it('gives the second of two bricks with the same uid a new one', function () {
+        $blocks = BrickTree::ensureUids([
+            nestedBrick('test-brick', attrs: ['uid' => 'same']),
+            nestedBrick('container-brick', [], [nestedBrick('test-brick', attrs: ['uid' => 'same'])]),
+        ]);
+
+        expect($blocks[0]['attrs']['uid'])->toBe('same')
+            ->and($blocks[1]['content'][0]['attrs']['uid'])->not->toBe('same');
+    });
+
+    it('keeps the uid when a brick is edited or moved', function () {
+        $mason = nestedMason([
+            nestedBrick('test-brick', ['title' => 'Old'], attrs: ['uid' => 'a']),
+            nestedBrick('container-brick', [], [], ['uid' => 'b']),
+        ]);
+
+        $state = $mason->executeCommands([
+            BrickCommand::updateBrick(0, nestedBrick('test-brick', ['title' => 'New'], attrs: ['uid' => 'other'])),
+            BrickCommand::moveBrick(0, 0, '1'),
+        ]);
+
+        expect($state[0]['attrs']['uid'])->toBe('b')
+            ->and($state[0]['content'][0]['attrs'])
+            ->uid->toBe('a')
+            ->config->toBe(['title' => 'New']);
+    });
+
+    it('gives an inserted brick and the bricks inside it new uids, also when it is a copy', function () {
+        $mason = nestedMason([
+            nestedBrick('container-brick', [], [nestedBrick('simple-brick', attrs: ['uid' => 'child'])], ['uid' => 'parent']),
+        ]);
+
+        $state = $mason->executeCommands([
+            BrickCommand::insertBrick($mason->getState()[0], 1),
+        ]);
+
+        expect($state[1]['attrs']['uid'])->not->toBe('parent')
+            ->and($state[1]['content'][0]['attrs']['uid'])->not->toBe('child')
+            ->and($state[0]['attrs']['uid'])->toBe('parent');
+    });
+
+    it('saves the uids', function () {
+        Livewire::test(LivewireNestedForm::class)
+            ->fillForm([
+                'title' => 'Nested',
+                'content' => [nestedBrick('simple-brick', attrs: ['uid' => 'saved'])],
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        expect(Page::query()->first()->content[0]['attrs']['uid'])->toBe('saved');
     });
 });

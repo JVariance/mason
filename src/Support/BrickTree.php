@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace Awcodes\Mason\Support;
 
+use Illuminate\Support\Str;
+
 /**
  * Reads and changes nested Mason content.
  *
  * A brick that contains other bricks keeps them under its "content" key, so a
  * brick is addressed by a path of indexes: "2" is the third brick at the top
  * level, "2.0" the first brick inside it. The root is addressed by null or "".
+ *
+ * Paths change when bricks move. For a lasting reference every brick carries
+ * a uid in "attrs.uid": it stays when the brick is edited or moved, and a
+ * newly inserted brick, e.g. a copy, gets a new one.
  */
 class BrickTree
 {
@@ -231,6 +237,57 @@ class BrickTree
         }
 
         return $blocks;
+    }
+
+    public static function newUid(): string
+    {
+        return Str::lower((string) Str::ulid());
+    }
+
+    /**
+     * Gives every brick without a uid a new one, and so does a brick whose uid
+     * an earlier brick already has.
+     *
+     * @param  array<int, mixed>  $blocks
+     * @return array<int, mixed>
+     */
+    public static function ensureUids(array $blocks): array
+    {
+        $seen = [];
+
+        return static::map($blocks, function (array $block) use (&$seen): array {
+            if (($block['type'] ?? null) !== 'masonBrick') {
+                return $block;
+            }
+
+            $uid = $block['attrs']['uid'] ?? null;
+
+            if (! is_string($uid) || $uid === '' || isset($seen[$uid])) {
+                $uid = static::newUid();
+                $block['attrs']['uid'] = $uid;
+            }
+
+            $seen[$uid] = true;
+
+            return $block;
+        });
+    }
+
+    /**
+     * New uids for the brick and the bricks inside it, so that a copy doesn't share them with the original.
+     *
+     * @param  array<string, mixed>  $brick
+     * @return array<string, mixed>
+     */
+    public static function withNewUids(array $brick): array
+    {
+        return static::map([$brick], function (array $block): array {
+            if (($block['type'] ?? null) === 'masonBrick') {
+                $block['attrs']['uid'] = static::newUid();
+            }
+
+            return $block;
+        })[0];
     }
 
     /**

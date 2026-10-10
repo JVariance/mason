@@ -434,6 +434,11 @@ export default function masonComponent({
 
             if (siblings && index >= 0 && index < siblings.length) {
                 this.pushToUndoStack(this.captureState())
+
+                // The brick stays the same brick
+                const uid = siblings[index]?.attrs?.uid
+                if (uid && brick?.attrs) brick.attrs.uid = uid
+
                 siblings[index] = brick
 
                 this.updateStateFromBlocks(blocks)
@@ -442,7 +447,7 @@ export default function masonComponent({
 
         // Merges attributes into bricks, e.g. layout data a container keeps on its
         // children, as one undo step. A null value removes the attribute; id and
-        // config stay untouched. updates: [{ path, attrs }]
+        // config stay untouched, and so does the uid. updates: [{ path, attrs }]
         handleUpdateBlocksAttributes(updates) {
             if (!Array.isArray(updates)) return
 
@@ -462,7 +467,8 @@ export default function masonComponent({
                 block.attrs = block.attrs ?? {}
 
                 Object.entries(attrs).forEach(([key, value]) => {
-                    if (key === 'id' || key === 'config') return
+                    if (key === 'id' || key === 'config' || key === 'uid')
+                        return
 
                     if (value === null) {
                         delete block.attrs[key]

@@ -29,8 +29,7 @@ it('saves correctly', function () {
 
     $record = Page::query()->first();
 
-    expect($record)
-        ->content->toBe($page->content);
+    expect(withoutUids($record->content))->toBe($page->content);
 });
 
 it('updated correctly', function () {
@@ -54,8 +53,7 @@ it('updated correctly', function () {
 
     $record = Page::query()->first();
 
-    expect($record)
-        ->content->toBe($newData->content);
+    expect(withoutUids($record->content))->toBe($newData->content);
 });
 
 it('can create null', function () {

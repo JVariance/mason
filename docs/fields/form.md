@@ -41,6 +41,21 @@ The sidebar toolbar switches the preview between mobile and tablet widths and to
 ![The editor previewing the page at mobile width](../assets/mobile-preview-light.png#gh-light-mode-only)
 ![The editor previewing the page at mobile width](../assets/mobile-preview-dark.png#gh-dark-mode-only)
 
+## Brick uids
+
+Every brick gets a uid in `attrs.uid`, a lasting reference to it. Paths and indexes change when bricks move; the uid does not:
+
+- It is given when a brick is inserted, and when content without uids is loaded into the field.
+- It stays when the brick is edited or moved, also into or out of a container.
+- An inserted brick always gets a new one, also when it is a copy of another brick, and so do the bricks inside it.
+- When content is loaded and saved, a uid that an earlier brick already has is replaced, so no two bricks share one.
+
+```json
+{"type": "masonBrick", "attrs": {"id": "section", "uid": "01k9z…", "config": {}}}
+```
+
+Use it to keep data about a brick elsewhere, e.g. translations or per-page overrides of shared content. `BrickTree::ensureUids()` gives content uids outside the field, `BrickTree::newUid()` makes one.
+
 ## Preview layout
 
 The editor renders inside an iframe, so it needs a layout carrying your application's styles. Without one the editor shows unstyled content that looks nothing like the front end.
