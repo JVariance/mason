@@ -80,6 +80,10 @@ Mason stores content as JSON arrays. Each brick entry has:
 
 A container brick with several areas tells them apart by an attribute of its bricks (e.g. `attrs.slot`). In `toHtmlWithChildren()`, `$children->where('slot', 'a')` gives an area's bricks, `$children->dropZone(['slot' => 'a'])` a drop zone that inserts with that attribute (passed to `BrickAction` as `attrs`), and `$children->dropTarget(['slot' => 'a'])` the attributes for the element around the area, so that bricks dropped next to its bricks or moved into it get the attribute as well. Outside the editor both are empty.
 
+### Brick Context
+
+`BrickContext` tells a brick where it is rendered without changing `toHtml()`'s signature: `uid()` and `attributes()` of the brick being rendered, and `get()` for values a container passed to the bricks inside it (`$children->with([...])`, `$child->with([...])`, or `BrickContext::with([...], fn)` around another renderer). Values reach nested containers' bricks too. The renderers render a container's bricks lazily, when it outputs them, so that its values reach them.
+
 ### Locked Structure
 
 `->lockedStructure($condition, comparedTo: $content)` keeps bricks editable but stops adding, moving and removing them: the editor hides those controls, `executeCommands()` skips insert, move and delete, and with `comparedTo` a validation rule checks the saved structure (`BrickTree::hasSameStructure()`), as the editor deletes and moves bricks in the browser.

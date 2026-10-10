@@ -63,6 +63,21 @@ class BrickChildren implements Countable, Htmlable, IteratorAggregate
     }
 
     /**
+     * The bricks rendered with values for them and the bricks inside them (BrickContext::get()).
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function with(array $values): self
+    {
+        return new self(
+            array_map(fn (BrickChild $child): BrickChild => $child->with($values), $this->children),
+            $this->dropZone,
+            $this->zone,
+            $this->target,
+        );
+    }
+
+    /**
      * The bricks whose attribute has the value, e.g. those in one slot.
      */
     public function where(string $attribute, mixed $value): self

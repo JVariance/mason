@@ -19,6 +19,57 @@ The name is the attribute on your model — cast to `array` or `json`, as covere
 
 `bricks()` lists what the author can insert. It also accepts a closure, and if you omit it entirely Mason falls back to its built-in `Section` brick, which is useful for a first look but rarely what you want in an application. See [Creating bricks](../bricks/creating.md).
 
+## Working in the editor
+
+Clicking a brick in the preview selects it and shows its controls: move up, move down, add, edit, and delete.
+
+![A selected hero brick with its controls in the top corner](../assets/block-controls-light.png#gh-light-mode-only)
+![A selected hero brick with its controls in the top corner](../assets/block-controls-dark.png#gh-dark-mode-only)
+
+**Add** opens the brick picker, where the author chooses whether to insert above or below the selected brick, and can search the available bricks.
+
+![The Add Brick picker with Insert above and Insert below, a search field, and the Content group of bricks](../assets/brick-picker-light.png#gh-light-mode-only)
+![The Add Brick picker with Insert above and Insert below, a search field, and the Content group of bricks](../assets/brick-picker-dark.png#gh-dark-mode-only)
+
+**Edit** opens the brick's form. How it opens is up to the brick's `configureBrickAction()`; the hero brick here uses a slide-over.
+
+![The hero brick's form open in a slide-over](../assets/edit-brick-light.png#gh-light-mode-only)
+![The hero brick's form open in a slide-over](../assets/edit-brick-dark.png#gh-dark-mode-only)
+
+The sidebar toolbar switches the preview between mobile and tablet widths and toggles fullscreen, so authors can check responsive layouts while they work. It also has clear all, undo, and redo.
+
+![The editor previewing the page at mobile width](../assets/mobile-preview-light.png#gh-light-mode-only)
+![The editor previewing the page at mobile width](../assets/mobile-preview-dark.png#gh-dark-mode-only)
+
+## Brick uids
+
+Every brick gets a uid in `attrs.uid`, a lasting reference to it. Paths and indexes change when bricks move; the uid does not:
+
+- It is given when a brick is inserted, and when content without uids is loaded into the field.
+- It stays when the brick is edited or moved, also into or out of a container.
+- An inserted brick always gets a new one, also when it is a copy of another brick, and so do the bricks inside it.
+- When content is loaded and saved, a uid that an earlier brick already has is replaced, so no two bricks share one.
+
+```json
+{"type": "masonBrick", "attrs": {"id": "section", "uid": "01k9z…", "config": {}}}
+```
+
+Use it to keep data about a brick elsewhere, e.g. translations or per-page overrides of shared content. `BrickTree::ensureUids()` gives content uids outside the field, `BrickTree::newUid()` makes one.
+
+## Locked structure
+
+`lockedStructure()` keeps every brick editable, but stops authors from adding, moving or removing bricks, e.g. for a translation that has to keep the structure of its source:
+
+```php
+Mason::make('content')
+    ->lockedStructure(
+        fn (?Post $record): bool => $record?->isTranslation() ?? false,
+        comparedTo: fn (?Post $record): ?array => $record?->content,
+    );
+```
+
+The editor hides the brick list, the drag handles, the drop zones and the move, add, delete and clear all buttons, and the field refuses insert, move and delete commands. Deleting and moving happen in the browser, though, so pass `comparedTo` to make the lock binding: on save, the field's content must have the same structure as that content — the same bricks in the same places, compared by id and [uid](#brick-uids). Configs may differ.
+
 ## Preview layout
 
 The editor renders inside an iframe, so it needs a layout carrying your application's styles. Without one the editor shows unstyled content that looks nothing like the front end.
@@ -57,6 +108,28 @@ The layout is an ordinary Blade view. Include your own CSS, then Mason's preview
 ```
 
 `@masonStyles` inlines the editor chrome — drop zones, controls and outlines — and `mason::iframe-preview-content` renders the bricks themselves from the `$blocks` variable Mason passes in.
+
+## Preview data
+
+In the editor preview, bricks get `null` as `toHtml()`'s `$data`, as there is no record to [render against](../bricks/rendering.md#passing-data-to-bricks). Pass what they need with `previewData()`, e.g. the language of the record being edited:
+
+```php
+Mason::make('content')
+    ->previewData(fn (?Post $record): array => ['language' => $record?->language_id]);
+```
+
+```php
+public static function toHtml(array $config, ?array $data = null): ?string
+{
+    $language = $data['language'] ?? null;
+
+    // …
+}
+```
+
+A brick that tells the editor from the front end by `$data === null` has to look at the data instead once the field passes some.
+
+The data travels to the preview's request in the signed render context. It must be JSON, and it is readable in the page, so it must hold nothing secret. Keep it the same between Livewire renders, e.g. from the saved record rather than from a live form field: the editor reads it once.
 
 ## Editor colours
 

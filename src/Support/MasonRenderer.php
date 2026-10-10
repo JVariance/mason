@@ -131,7 +131,10 @@ class MasonRenderer implements Htmlable
             ));
 
             return (string) $container::toHtmlWithChildren($config, new BrickChildren(
-                array_map(fn (array $block): BrickChild => new BrickChild($block, $this->renderBlocks([$block])), $children),
+                array_map(fn (array $block): BrickChild => new BrickChild(
+                    $block,
+                    fn (array $values): string => BrickContext::with($values, fn (): string => $this->renderBlocks([$block])),
+                ), $children),
             ), data: $this->getData());
         }
 
@@ -157,7 +160,7 @@ class MasonRenderer implements Htmlable
                 continue;
             }
 
-            $brickHtml = $this->getBrickHtml($id, $config, is_array($block['content'] ?? null) ? $block['content'] : []);
+            $brickHtml = BrickContext::render($block, fn (): string => $this->getBrickHtml($id, $config, is_array($block['content'] ?? null) ? $block['content'] : []));
 
             if ($brickHtml !== '' && $brickHtml !== '0') {
                 $html[] = $brickHtml;

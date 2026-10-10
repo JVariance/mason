@@ -81,40 +81,7 @@ class IframeEntryRenderer
      */
     public function getBlockHtml(array $block): ?string
     {
-        if (($block['type'] ?? null) !== 'masonBrick') {
-            return null;
-        }
-
-        $id = $block['attrs']['id'] ?? null;
-        $config = $block['attrs']['config'] ?? [];
-
-        if (blank($id)) {
-            return null;
-        }
-
-        // getBrick() resolves through getCachedBricks(), which unwraps BrickGroups.
-        // Walking getBricks() directly skipped every brick registered inside a
-        // group, and fatalled outright once a group reached the brick list.
-        $brick = $this->getBrick($id);
-
-        if ($brick === null) {
-            return view('mason::components.unregistered-brick', ['label' => $id])->render();
-        }
-
-        $container = $this->getContainerBrick($id);
-
-        if ($container !== null) {
-            $children = array_values(array_filter(
-                is_array($block['content'] ?? null) ? $block['content'] : [],
-                fn (mixed $child): bool => is_array($child) && $this->canContainBrick($id, (string) ($child['attrs']['id'] ?? '')),
-            ));
-
-            return $container::toHtmlWithChildren($config, new BrickChildren(
-                array_map(fn (array $child): BrickChild => new BrickChild($child, (string) $this->getBlockHtml($child)), $children),
-            ), data: $this->getData());
-        }
-
-        return $brick::toHtml($config, data: $this->getData());
+        return BrickContext::render($block, fn (): ?string => $this->renderBlockHtml($block));
     }
 
     /**
@@ -150,6 +117,50 @@ class IframeEntryRenderer
         return view('mason::iframe-entry', [
             'blocks' => $blocks,
         ])->render();
+    }
+
+    /**
+     * @param  array<string, mixed>  $block
+     */
+    protected function renderBlockHtml(array $block): ?string
+    {
+        if (($block['type'] ?? null) !== 'masonBrick') {
+            return null;
+        }
+
+        $id = $block['attrs']['id'] ?? null;
+        $config = $block['attrs']['config'] ?? [];
+
+        if (blank($id)) {
+            return null;
+        }
+
+        // getBrick() resolves through getCachedBricks(), which unwraps BrickGroups.
+        // Walking getBricks() directly skipped every brick registered inside a
+        // group, and fatalled outright once a group reached the brick list.
+        $brick = $this->getBrick($id);
+
+        if ($brick === null) {
+            return view('mason::components.unregistered-brick', ['label' => $id])->render();
+        }
+
+        $container = $this->getContainerBrick($id);
+
+        if ($container !== null) {
+            $children = array_values(array_filter(
+                is_array($block['content'] ?? null) ? $block['content'] : [],
+                fn (mixed $child): bool => is_array($child) && $this->canContainBrick($id, (string) ($child['attrs']['id'] ?? '')),
+            ));
+
+            return $container::toHtmlWithChildren($config, new BrickChildren(
+                array_map(fn (array $child): BrickChild => new BrickChild(
+                    $child,
+                    fn (array $values): string => BrickContext::with($values, fn (): string => (string) $this->getBlockHtml($child)),
+                ), $children),
+            ), data: $this->getData());
+        }
+
+        return $brick::toHtml($config, data: $this->getData());
     }
 
     /**

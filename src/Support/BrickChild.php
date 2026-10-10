@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Awcodes\Mason\Support;
 
+use Closure;
 use Illuminate\Contracts\Support\Htmlable;
 use Stringable;
 
@@ -12,17 +13,37 @@ use Stringable;
  */
 class BrickChild implements Htmlable, Stringable
 {
+    protected ?string $rendered = null;
+
     /**
      * @param  array<string, mixed>  $block
+     * @param  string|(Closure(array<string, mixed> $values): string)  $html  the HTML, or how to render it with values
+     *                                                                        for the bricks inside (BrickContext)
      */
     public function __construct(
         protected array $block,
-        protected string $html,
+        protected string | Closure $html,
     ) {}
 
     public function __toString(): string
     {
-        return $this->html;
+        return $this->toHtml();
+    }
+
+    /**
+     * The brick rendered with values for it and the bricks inside it, e.g. a heading level (BrickContext::get()).
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function with(array $values): self
+    {
+        $html = $this->html;
+
+        if (! $html instanceof Closure || $values === []) {
+            return $this;
+        }
+
+        return new self($this->block, fn (array $more): string => $html([...$values, ...$more]));
     }
 
     public function getId(): ?string
@@ -46,8 +67,13 @@ class BrickChild implements Htmlable, Stringable
         return data_get($this->block['attrs'] ?? [], $key, $default);
     }
 
+    /**
+     * Rendered when first needed, so that a container's values (BrickContext) reach it.
+     */
     public function toHtml(): string
     {
-        return $this->html;
+        $html = $this->html;
+
+        return $this->rendered ??= $html instanceof Closure ? $html([]) : $html;
     }
 }

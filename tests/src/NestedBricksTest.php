@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Awcodes\Mason\Mason;
 use Awcodes\Mason\Support\BrickCommand;
+use Awcodes\Mason\Support\BrickContext;
 use Awcodes\Mason\Support\BrickTree;
 use Awcodes\Mason\Support\Faker;
 use Awcodes\Mason\Support\IframeEntryRenderer;
@@ -11,6 +12,8 @@ use Awcodes\Mason\Support\IframeRenderer;
 use Awcodes\Mason\Support\MasonRenderer;
 use Awcodes\Mason\Tests\Fixtures\AreaContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\ContainerBrick;
+use Awcodes\Mason\Tests\Fixtures\ContextBrick;
+use Awcodes\Mason\Tests\Fixtures\LevelContainerBrick;
 use Awcodes\Mason\Tests\Fixtures\LivewireLockedForm;
 use Awcodes\Mason\Tests\Fixtures\LivewireNestedForm;
 use Awcodes\Mason\Tests\Fixtures\RestrictedContainerBrick;
@@ -463,5 +466,51 @@ describe('container areas', function () {
                 ->area->toBe('b')
                 ->id->toBe('simple-brick')
                 ->uid->not->toBe('stolen'));
+    });
+});
+
+describe('brick context', function () {
+    $content = fn (): array => [
+        nestedBrick('context-brick', attrs: ['uid' => 'top']),
+        nestedBrick('level-container-brick', [], [
+            nestedBrick('context-brick', attrs: ['uid' => 'inner']),
+            // A container that passes nothing on keeps the values around it
+            nestedBrick('container-brick', [], [
+                nestedBrick('context-brick', attrs: ['uid' => 'deep']),
+                nestedBrick('level-container-brick', [], [nestedBrick('context-brick', attrs: ['uid' => 'deeper'])]),
+            ]),
+        ], ['uid' => 'group']),
+    ];
+    $bricks = [ContextBrick::class, LevelContainerBrick::class, ContainerBrick::class];
+
+    it('gives bricks their uid and the values of the containers around them', function (string $renderer, string $method) use ($content, $bricks) {
+        $html = $renderer::make($content())->bricks($bricks)->{$method}();
+
+        expect($html)
+            ->toContain('data-uid="top" data-level="1"')
+            ->toContain('data-uid="inner" data-level="2"')
+            ->toContain('data-uid="deep" data-level="2"')
+            ->toContain('data-uid="deeper" data-level="3"');
+    })->with([
+        'website' => [MasonRenderer::class, 'toUnsafeHtml'],
+        'editor preview' => [IframeRenderer::class, 'toHtml'],
+        'entry' => [IframeEntryRenderer::class, 'toHtml'],
+    ]);
+
+    it('hands values to content rendered inside a brick', function () use ($bricks) {
+        $html = BrickContext::with(['level' => 5], fn () => MasonRenderer::make([nestedBrick('context-brick', attrs: ['uid' => 'x'])])->bricks($bricks)->toUnsafeHtml());
+
+        expect($html)->toContain('data-level="5"')
+            ->and(BrickContext::get('level'))->toBeNull()
+            ->and(BrickContext::uid())->toBeNull();
+    });
+
+    it('is empty again after a brick fails to render', function () {
+        try {
+            BrickContext::with(['level' => 2], fn () => throw new RuntimeException('failed'));
+        } catch (RuntimeException) {
+        }
+
+        expect(BrickContext::values())->toBe([]);
     });
 });

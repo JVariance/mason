@@ -46,6 +46,16 @@ public static function toHtml(array $config, ?array $data = null): ?string
 }
 ```
 
+## The brick being rendered
+
+While a brick renders, `BrickContext::uid()` is its [uid](../fields/form.md#brick-uids) and `BrickContext::attributes()` its attributes, in every renderer. Use the uid for ids that stay the same when the content around the brick changes:
+
+```php
+$id = 'faq-' . (BrickContext::uid() ?? Str::random(8));
+```
+
+Shared content that appears more than once on a page has the same uids each time. Have the brick that embeds it pass a prefix (`BrickContext::with(['id_prefix' => …], …)`) and use it in the ids.
+
 ## The renderer
 
 For more control, use `MasonRenderer` directly:

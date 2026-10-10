@@ -73,33 +73,7 @@ class IframeRenderer
      */
     public function getBlockHtml(array $block, string $path = ''): ?string
     {
-        if (($block['type'] ?? null) !== 'masonBrick') {
-            return null;
-        }
-
-        $id = $block['attrs']['id'] ?? null;
-        $config = $block['attrs']['config'] ?? [];
-
-        if (blank($id)) {
-            return null;
-        }
-
-        // getBrick() resolves through getCachedBricks(), which unwraps BrickGroups.
-        // Walking getBricks() directly skipped every brick registered inside a
-        // group, and fatalled outright once a group reached the brick list.
-        $brick = $this->getBrick($id);
-
-        if ($brick === null) {
-            return view('mason::components.unregistered-brick', ['label' => $id])->render();
-        }
-
-        $container = $this->getContainerBrick($id);
-
-        if ($container !== null) {
-            return $container::toHtmlWithChildren($config, $this->getChildren($block, $path), data: $this->data);
-        }
-
-        return $brick::toHtml($config, data: $this->data);
+        return BrickContext::render($block, fn (): ?string => $this->renderBlockHtml($block, $path));
     }
 
     /**
@@ -130,6 +104,40 @@ class IframeRenderer
     }
 
     /**
+     * @param  array<string, mixed>  $block
+     */
+    protected function renderBlockHtml(array $block, string $path): ?string
+    {
+        if (($block['type'] ?? null) !== 'masonBrick') {
+            return null;
+        }
+
+        $id = $block['attrs']['id'] ?? null;
+        $config = $block['attrs']['config'] ?? [];
+
+        if (blank($id)) {
+            return null;
+        }
+
+        // getBrick() resolves through getCachedBricks(), which unwraps BrickGroups.
+        // Walking getBricks() directly skipped every brick registered inside a
+        // group, and fatalled outright once a group reached the brick list.
+        $brick = $this->getBrick($id);
+
+        if ($brick === null) {
+            return view('mason::components.unregistered-brick', ['label' => $id])->render();
+        }
+
+        $container = $this->getContainerBrick($id);
+
+        if ($container !== null) {
+            return $container::toHtmlWithChildren($config, $this->getChildren($block, $path), data: $this->data);
+        }
+
+        return $brick::toHtml($config, data: $this->data);
+    }
+
+    /**
      * The bricks inside a container, each wrapped in the editor's controls, and the zone to drop more into it.
      *
      * @param  array<string, mixed>  $block
@@ -144,10 +152,10 @@ class IframeRenderer
         $children = array_map(function (array $child, int $index) use ($path, $content): BrickChild {
             $childPath = ltrim($path . '.' . $index, '.');
 
-            return new BrickChild($child, view('mason::components.preview-block', [
+            return new BrickChild($child, fn (array $values): string => BrickContext::with($values, fn (): string => view('mason::components.preview-block', [
                 'block' => $this->getBlockData($child, $childPath),
                 'total' => count($content),
-            ])->render());
+            ])->render()));
         }, $content, array_keys($content));
 
         $zone = fn (array $attrs = [], ?bool $isEmpty = null): string => view('mason::components.drop-zone', [
