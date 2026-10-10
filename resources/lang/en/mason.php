@@ -50,4 +50,7 @@ return [
     'entry' => [
         'empty' => 'No content',
     ],
+    'validation' => [
+        'locked_structure' => 'Bricks cannot be added, moved or removed here.',
+    ],
 ];

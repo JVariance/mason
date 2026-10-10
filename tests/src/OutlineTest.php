@@ -62,6 +62,6 @@ it('does not save outline labels', function () {
         ->call('create')
         ->assertHasNoFormErrors();
 
-    expect(Page::query()->first()->content)
+    expect(withoutUids(Page::query()->first()->content))
         ->toBe([sectionBrick('<p>About us</p>')]);
 });

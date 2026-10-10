@@ -12,6 +12,7 @@
     $defaultColorMode = $getDefaultColorMode();
     $hasColorModeToggle = $hasColorModeToggle();
     $hasOutline = ! $isDisabled && filled($bricks) && $hasOutline();
+    $isStructureLocked = $isStructureLocked();
 
     $outlineBricks = [];
 
@@ -45,9 +46,13 @@
                     defaultColorMode: @js($defaultColorMode),
                     hasColorModeToggle: @js($hasColorModeToggle),
                     outlineBricks: @js($outlineBricks),
+                    structureLocked: @js($isStructureLocked),
                 })"
         id="{{ "mason-wrapper-" . $statePath }}"
-        class="mason-wrapper"
+        @class([
+            "mason-wrapper",
+            "mason-structure-locked" => $isStructureLocked,
+        ])
         tabindex="-1"
         x-bind:class="{
             'fullscreen': fullscreen,

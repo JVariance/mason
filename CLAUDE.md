@@ -73,7 +73,16 @@ Mason stores content as JSON arrays. Each brick entry has:
 - `type`: Always "masonBrick"
 - `attrs.id`: The brick's ID
 - `attrs.config`: The brick's form data
+- `attrs.uid`: A lasting reference to the brick (`BrickTree::ensureUids()` on load and save). It stays when the brick is edited or moved; an inserted brick, e.g. a copy, gets a new one
 - `attrs.preview` and `attrs.label`: Stripped before saving (editor-only)
+
+### Locked Structure
+
+`->lockedStructure($condition, comparedTo: $content)` keeps bricks editable but stops adding, moving and removing them: the editor hides those controls, `executeCommands()` skips insert, move and delete, and with `comparedTo` a validation rule checks the saved structure (`BrickTree::hasSameStructure()`), as the editor deletes and moves bricks in the browser.
+
+### Preview Data
+
+`->previewData(array|Closure)` hands the bricks data in the editor preview as `toHtml()`'s `$data` (without it they get null, as before), e.g. the language of the record being edited. It travels in the signed `RenderContext`, so it must be JSON and nothing secret, and it should not change between Livewire renders.
 
 ### Rendering Content
 
