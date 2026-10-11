@@ -271,3 +271,8 @@ body {
         display: none;
     }
 }
+/* <details> in bricks open and close like on the website: their <summary> takes clicks */
+.mason-block-content summary {
+    pointer-events: auto;
+    cursor: pointer;
+}

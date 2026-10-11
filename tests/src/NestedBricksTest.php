@@ -705,3 +705,12 @@ describe('add line in the preview', function () {
             ->toContain(__('mason::mason.preview.placeholder'));
     });
 });
+
+describe('details in the preview', function () {
+    it('marks bricks with their uid, so that open details are remembered per brick', function () {
+        $html = IframeRenderer::make([nestedBrick('simple-brick', attrs: ['uid' => 'abc'])])->bricks([SimpleBrick::class])->toHtml();
+
+        expect($html)->toContain('data-uid="abc"')
+            ->toContain("detailsStorageKey = 'mason-preview-details'");
+    });
+});

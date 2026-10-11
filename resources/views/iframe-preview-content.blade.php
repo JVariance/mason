@@ -258,6 +258,95 @@
                 )
         }
 
+        // <details> in bricks open and close like on the website. Those with data-preview-key keep their state
+        // when the preview reloads after a change (per brick uid and key, for this session).
+        const detailsStorageKey = 'mason-preview-details'
+
+        function detailsKey(details) {
+            const block = details.closest('[data-uid]')
+            const key = details.getAttribute('data-preview-key')
+
+            return block && key
+                ? `${block.getAttribute('data-uid')}:${key}`
+                : null
+        }
+
+        function loadDetailsState() {
+            try {
+                return JSON.parse(
+                    sessionStorage.getItem(detailsStorageKey) || '{}',
+                )
+            } catch {
+                return {}
+            }
+        }
+
+        function saveDetailsState(state) {
+            try {
+                sessionStorage.setItem(detailsStorageKey, JSON.stringify(state))
+            } catch {}
+        }
+
+        function restoreDetails() {
+            const state = loadDetailsState()
+
+            container
+                .querySelectorAll('details[data-preview-key]')
+                .forEach((details) => {
+                    const key = detailsKey(details)
+
+                    if (key && key in state) details.open = state[key]
+                })
+        }
+
+        // toggle does not bubble
+        container.addEventListener(
+            'toggle',
+            function (e) {
+                if (!(e.target instanceof HTMLDetailsElement)) return
+
+                const key = detailsKey(e.target)
+
+                if (!key) return
+
+                const state = loadDetailsState()
+                state[key] = e.target.open
+                saveDetailsState(state)
+            },
+            true,
+        )
+
+        restoreDetails()
+
+        // A brick selected inside closed <details>, e.g. from the outline, becomes visible
+        function openDetailsAround(element) {
+            let details = element.parentElement?.closest('details')
+
+            while (details) {
+                details.open = true
+                details = details.parentElement?.closest('details')
+            }
+        }
+
+        // While dragging, <details> open after a moment over their <summary>
+        let summaryTimer = null
+        let summaryUnderPointer = null
+
+        function openSummaryWhileDragging(e) {
+            const summary = e.target.closest?.('summary')
+
+            if (summary === summaryUnderPointer) return
+
+            clearTimeout(summaryTimer)
+            summaryUnderPointer = summary
+
+            if (summary && !summary.parentElement.open) {
+                summaryTimer = setTimeout(() => {
+                    summary.parentElement.open = true
+                }, 500)
+            }
+        }
+
         function selectBlock(path, scroll = false) {
             // Remove previous selection
             if (selectedBlock) {
@@ -266,6 +355,7 @@
 
             const block = blockByPath(path)
             if (block) {
+                openDetailsAround(block)
                 block.classList.add('selected')
                 selectedBlock = block
                 updateMoveButtons(block)
@@ -542,6 +632,9 @@
         })
 
         container.addEventListener('dragend', function () {
+            clearTimeout(summaryTimer)
+            summaryUnderPointer = null
+
             // Re-enable interactions
             document.body.style.userSelect = ''
             document.body.style.webkitUserSelect = ''
@@ -560,6 +653,7 @@
             e.preventDefault()
 
             clearDropIndicators()
+            openSummaryWhileDragging(e)
 
             if (structureLocked) {
                 if (e.dataTransfer) e.dataTransfer.dropEffect = 'none'

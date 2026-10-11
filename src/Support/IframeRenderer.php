@@ -193,6 +193,7 @@ class IframeRenderer
             'movementLocked' => $template?->isMovementLocked() ?? false,
             'hidden' => ($block['attrs']['hidden'] ?? false) === true,
             'index' => (int) str($path)->afterLast('.')->toString(),
+            'uid' => is_string($block['attrs']['uid'] ?? null) ? $block['attrs']['uid'] : null,
             'path' => $path,
             'id' => $id,
             'config' => $block['attrs']['config'] ?? [],

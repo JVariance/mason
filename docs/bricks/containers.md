@@ -137,6 +137,19 @@ class Accordion extends Brick implements HasBrickTemplate
 - Locks follow the template in the code, never the stored content, so they cannot be forged and change with the code. Locked bricks are marked in the preview.
 - A template only fills a new container. Bricks a template adds later reach existing containers only if they are locked against removal; for anything else, use a [migration](creating.md#changing-the-stored-format).
 
+## Details in the preview
+
+`<details>` in bricks open and close in the preview like on the website. Give them `data-preview-key` (unique within the brick) to keep their state when the preview reloads after a change:
+
+```blade
+<details data-preview-key="{{ $item['id'] }}">
+    <summary>{{ $item['title'] }}</summary>
+    {{ $children->where('item', $item['id']) }}
+</details>
+```
+
+When a brick inside closed details is selected, e.g. from the outline, they open; while dragging, they open after a moment over their summary.
+
 ## Storage
 
 The bricks inside a container are stored under its `content` key:

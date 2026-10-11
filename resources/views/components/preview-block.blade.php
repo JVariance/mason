@@ -4,6 +4,9 @@
     draggable="{{ $block["movementLocked"] ?? false ? "false" : "true" }}"
     data-block-index="{{ $block["index"] }}"
     data-block-path="{{ $block["path"] }}"
+    @if ($block["uid"] ?? null)
+        data-uid="{{ $block["uid"] }}"
+    @endif
     data-brick-id="{{ $block["id"] }}"
     data-config="{{ json_encode($block["config"]) }}"
     data-total-blocks="{{ $total }}"
@@ -117,6 +120,7 @@
                 >
                     <title>
                         {{ $block["hidden"] ?? false ? __("mason::mason.preview.show") : __("mason::mason.preview.hide") }}
+                        
                     </title>
                     @if ($block["hidden"] ?? false)
                         <path
