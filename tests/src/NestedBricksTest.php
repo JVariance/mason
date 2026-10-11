@@ -673,3 +673,22 @@ describe('brick templates', function () {
             ->toContain('data-action="move-up"');
     });
 });
+
+describe('add line in the preview', function () {
+    it('puts an add button between the top level bricks and after the last one', function () {
+        $html = IframeRenderer::make([nestedBrick('simple-brick'), nestedBrick('test-brick', ['title' => 'Second'])])
+            ->bricks([SimpleBrick::class, TestBrick::class])
+            ->toHtml();
+
+        expect(substr_count($html, 'class="mason-inserter"'))->toBe(3)
+            ->and($html)->toMatch('/data-drop-index="2"\s+data-drop-parent=""\s+data-drop-end/');
+    });
+
+    it('offers it without bricks too', function () {
+        $html = IframeRenderer::make([])->bricks([SimpleBrick::class])->toHtml();
+
+        expect($html)->toContain('mason-drop-zone-start')
+            ->toContain('class="mason-inserter"')
+            ->toContain(__('mason::mason.preview.placeholder'));
+    });
+});
