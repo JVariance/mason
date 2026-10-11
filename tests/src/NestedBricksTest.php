@@ -684,6 +684,19 @@ describe('add line in the preview', function () {
             ->and($html)->toMatch('/data-drop-index="2"\s+data-drop-parent=""\s+data-drop-end/');
     });
 
+    it('gives the drop zones of containers the same add button, with the placeholder when empty', function () {
+        $html = IframeRenderer::make([
+            nestedBrick('container-brick', [], [nestedBrick('simple-brick')]),
+            nestedBrick('container-brick', [], []),
+        ])->bricks([SimpleBrick::class, ContainerBrick::class])->toHtml();
+
+        $filled = str($html)->betweenFirst('data-drop-parent="0"', '</div>')->toString();
+        $empty = str($html)->betweenFirst('data-drop-parent="1"', '</div>')->toString();
+
+        expect($filled)->toContain('class="mason-inserter"')->not->toContain('mason-drop-zone-placeholder')
+            ->and($empty)->toContain('class="mason-inserter"')->toContain('mason-drop-zone-placeholder');
+    });
+
     it('offers it without bricks too', function () {
         $html = IframeRenderer::make([])->bricks([SimpleBrick::class])->toHtml();
 

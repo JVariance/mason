@@ -127,31 +127,6 @@ body {
     min-height: 4rem;
     border-color: var(--mason-drop-zone-border, rgba(156, 163, 175, 0.5));
 }
-.mason-drop-zone-add {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    border: none;
-    border-radius: 0.25rem;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.875rem;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s;
-
-    svg {
-        width: 1rem;
-        height: 1rem;
-    }
-}
-.mason-drop-zone-empty .mason-drop-zone-add,
-.mason-block:hover > .mason-block-content .mason-drop-zone-add,
-.mason-drop-zone-add:focus-visible {
-    opacity: 1;
-}
 .mason-unregistered-brick {
     display: flex;
     align-items: center;
@@ -269,4 +244,30 @@ body {
 /* While dragging, the drop zone shows where the brick goes */
 .mason-drop-zone.active > .mason-inserter {
     opacity: 0;
+}
+/* In containers: the add line after their bricks, shown when the container is hovered */
+.mason-drop-zone-nested {
+    min-height: 2rem;
+}
+.mason-block:hover
+    > .mason-block-content
+    .mason-drop-zone-nested
+    > .mason-inserter {
+    opacity: 1;
+}
+/* An empty container: the button with the placeholder, without the line */
+.mason-drop-zone-nested.mason-drop-zone-empty {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-block: 0.75rem;
+}
+.mason-drop-zone-empty > .mason-inserter {
+    position: static;
+    height: auto;
+    opacity: 1;
+    transform: none;
+
+    &::before {
+        display: none;
+    }
 }
