@@ -7,6 +7,8 @@ description: Turn stored Mason content into HTML on the front end.
 
 Content is stored as JSON, so you are free to render it however you like. Mason also ships a renderer, which needs the same brick list the field used — this is where a [reusable collection](organizing.md) pays off.
 
+![The Home page rendered on the front end with the same brick views the editor uses](../assets/rendered-page-light.png)
+
 ## The helper
 
 ```blade
@@ -15,10 +17,16 @@ Content is stored as JSON, so you are free to render it however you like. Mason 
 
 ## The Blade directive
 
-`@mason` is shorthand for the helper followed by `toHtml()`, and takes the same two arguments:
+`@mason` is shorthand for the helper followed by `toHtml()`, and takes the same arguments:
 
 ```blade
 @mason($post->content, \App\Mason\BrickCollection::make())
+```
+
+The arguments are passed to the helper as written, so named arguments work here too:
+
+```blade
+@mason(content: $post->content, bricks: \App\Mason\BrickCollection::make())
 ```
 
 Pass the brick list. Given content alone, `@mason` renders with the default list — `Section` and nothing else — so your own bricks produce no output.

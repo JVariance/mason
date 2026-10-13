@@ -33,7 +33,7 @@
             {{ __("mason::mason.preview.hidden") }}
         </span>
     @endif
-    <div class="mason-block-controls">
+    <div class="mason-block-controls" data-focus="mason-block-controls">
         @unless ($block["movementLocked"] ?? false)
             <button
                 class="mason-block-btn"
@@ -77,6 +77,7 @@
             class="mason-block-btn"
             title="{{ __("mason::mason.preview.add") }}"
             data-action="add"
+            data-focus-action="mason-add-brick"
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"

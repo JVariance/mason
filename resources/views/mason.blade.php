@@ -53,6 +53,7 @@
             "mason-wrapper",
             "mason-structure-locked" => $isStructureLocked,
         ])
+        data-focus="mason-editor"
         tabindex="-1"
         x-bind:class="{
             'fullscreen': fullscreen,
