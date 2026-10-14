@@ -31,8 +31,8 @@ Locks of bricks a container comes with (`HasBrickTemplate`) follow the template 
 
 The preview and entry render in an iframe fed by a separate request.
 
-- The bricks, the layout and the preview data (`previewData()`) travel in a signed render context. A client can replay it, but cannot change it. It is signed, not encrypted: preview data is readable in the page, so it must hold nothing secret.
-- The entry's render data (`MasonEntry::data()`) is encrypted, models are reduced to class and key.
+- The bricks, the layout and the preview data (`previewData()`) travel in a signed render context. A client can replay it, but cannot change it, so it cannot make the server render classes or views it was not given. It is signed, not encrypted: preview data is readable in the page, so it must hold nothing secret.
+- The entry's render data (`MasonEntry::data()`) is encrypted, models are reduced to class and key and resolved again on the server.
 
 ## Messages between editor and iframe
 
