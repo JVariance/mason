@@ -939,7 +939,7 @@ export default function masonComponent({
         },
 
         openBrickPicker(target) {
-            if (structureLocked) return
+            if (structureLocked || disabled) return
 
             this.brickPickerTarget = target
             this.brickPickerOpen = true

@@ -223,6 +223,13 @@
             } else {
                 container.style.pointerEvents = ''
             }
+
+            container.classList.toggle('mason-disabled', isDisabled)
+
+            // Out of the tab order too, not only hidden
+            container.querySelectorAll('.mason-inserter').forEach((button) => {
+                button.disabled = isDisabled
+            })
         }
 
         // Bricks can be edited, but not added, moved or removed: their controls and the drop zones are hidden.
@@ -412,16 +419,27 @@
         container.addEventListener('click', function (e) {
             const action = e.target.closest('[data-action]')
 
-            // The add button of a container's drop zone adds into the container
+            // The add line of a drop zone opens the brick picker at its position, also inside a container
             if (action && action.getAttribute('data-action') === 'add-into') {
-                const zone = action.closest('.mason-drop-zone')
+                // Only the round button adds, not the hover strip around it; keyboard clicks have no position
+                if (
+                    e.detail !== 0 &&
+                    !e.target.closest('.mason-inserter-icon')
+                ) {
+                    return
+                }
 
-                postToParent({
-                    type: 'openBrickPicker',
-                    parent: zone.getAttribute('data-drop-parent') ?? '',
-                    index: parseInt(zone.getAttribute('data-drop-index')),
-                    attrs: parseAttrs(zone),
-                })
+                const zone = action.closest('.mason-drop-zone')
+                const index = parseInt(zone?.getAttribute('data-drop-index'))
+
+                if (!isDisabled && !isNaN(index)) {
+                    postToParent({
+                        type: 'openBrickPicker',
+                        parent: zone.getAttribute('data-drop-parent') ?? '',
+                        index,
+                        attrs: parseAttrs(zone),
+                    })
+                }
 
                 return
             }
@@ -523,6 +541,56 @@
         let draggedPath = null
         let draggedBlock = null
 
+        // The drop zones catch the pointer only while something is dragged over the preview,
+        // a brick of the preview or one from the sidebar
+        function setDragging(dragging) {
+            container.classList.toggle('mason-dragging', dragging)
+        }
+
+        // Time of the last drag event; dragover keeps firing while a drag is over the preview
+        let lastDragEvent = 0
+
+        document.addEventListener('dragenter', () => setDragging(true), true)
+        document.addEventListener(
+            'dragover',
+            () => {
+                lastDragEvent = performance.now()
+                setDragging(true)
+            },
+            true,
+        )
+        document.addEventListener(
+            'dragleave',
+            (e) => {
+                // Leaving the preview
+                if (!e.relatedTarget) setDragging(false)
+            },
+            true,
+        )
+        document.addEventListener('drop', () => setDragging(false), true)
+        document.addEventListener('dragend', () => setDragging(false), true)
+        // A drag can end without these, e.g. when cancelled outside the preview: a move without
+        // a pressed button means it is over. Safari sends such moves during a drag too, so only
+        // once no drag event has come for a while.
+        document.addEventListener('pointermove', (e) => {
+            if (e.buttons !== 0 || performance.now() - lastDragEvent < 1000) {
+                return
+            }
+
+            setDragging(false)
+
+            if (draggedBlock) endBlockDrag()
+        })
+
+        let pointerDownTarget = null
+        document.addEventListener(
+            'pointerdown',
+            (e) => {
+                pointerDownTarget = e.target
+            },
+            true,
+        )
+
         // Where a drop would go: a drop zone, or before / after the block under the pointer
         function resolveDropTarget(e) {
             const zone = e.target.closest('.mason-drop-zone')
@@ -605,9 +673,10 @@
                 return
             }
 
-            // Prevent dragging if clicking on controls (but allow drag handle), and bricks a template keeps in place
+            // Prevent dragging from the controls, and bricks a template keeps in place. The event's target
+            // is the dragged block itself, so check where the pointer went down.
             if (
-                e.target.closest('.mason-block-controls') ||
+                pointerDownTarget?.closest('.mason-block-controls') ||
                 block.hasAttribute('data-movement-locked')
             ) {
                 e.preventDefault()
@@ -631,7 +700,11 @@
             e.dataTransfer.setData('text/plain', draggedPath)
         })
 
-        container.addEventListener('dragend', function () {
+        container.addEventListener('dragend', endBlockDrag)
+
+        // Ends moving a brick: after dragend, and on drop, which comes before dragend
+        // and could otherwise leave the brick unclickable when it does not move
+        function endBlockDrag() {
             clearTimeout(summaryTimer)
             summaryUnderPointer = null
 
@@ -647,7 +720,7 @@
 
             draggedBlock = null
             draggedPath = null
-        })
+        }
 
         container.addEventListener('dragover', function (e) {
             e.preventDefault()
@@ -707,8 +780,7 @@
                     })
                 }
 
-                draggedPath = null
-                draggedBlock = null
+                endBlockDrag()
 
                 return
             }
