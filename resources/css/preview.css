@@ -17,13 +17,12 @@ body {
     -webkit-user-drag: element;
 }
 /*
- * Only the innermost hovered block, not every container around it. The frame
- * is a layer inside the brick like the selection below, not an outline: the
- * next brick paints over an outline's bottom edge. Outside the brick, the
- * layer would widen the page on hover and, with scrollbars always shown, make
- * it jitter.
+ * The hover frame is a layer inside the brick like the selection below, not
+ * an outline: the next brick paints over an outline's bottom edge. Outside the
+ * brick, the layer would widen the page on hover and, with scrollbars always
+ * shown, make it jitter.
  */
-.mason-block:hover:not(.selected):not(:has(.mason-block:hover))::before {
+.mason-block:not(.selected):hover::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -60,17 +59,6 @@ body {
 .mason-block-content {
     pointer-events: none;
 }
-/* The bricks inside a container brick stay interactive */
-.mason-block-content .mason-block,
-.mason-block-content .mason-drop-zone {
-    pointer-events: auto;
-}
-.mason-block.mason-drop-before {
-    box-shadow: 0 -3px 0 0 var(--mason-border-color, #0ea5e9);
-}
-.mason-block.mason-drop-after {
-    box-shadow: 0 3px 0 0 var(--mason-border-color, #0ea5e9);
-}
 .mason-block.dragging .mason-block-content * {
     pointer-events: none !important;
     user-select: none !important;
@@ -89,7 +77,7 @@ body {
     background: var(--mason-controls-background, rgba(0, 0, 0, 0.8));
     border-radius: 0.25rem;
 }
-.mason-block.selected > .mason-block-controls {
+.mason-block.selected .mason-block-controls {
     display: flex;
 }
 .mason-block-btn {
@@ -142,22 +130,6 @@ body {
         margin-bottom: 0;
     }
 }
-.mason-drop-zone-nested {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 1.5rem;
-    margin: 0;
-    border-radius: 0.25rem;
-    color: var(--mason-drop-zone-text, #9ca3af);
-}
-.mason-drop-zone.mason-drop-zone-nested.active {
-    margin: 0;
-}
-.mason-drop-zone-nested.mason-drop-zone-empty {
-    min-height: 4rem;
-    border-color: var(--mason-drop-zone-border, rgba(156, 163, 175, 0.5));
-}
 .mason-unregistered-brick {
     display: flex;
     align-items: center;
@@ -179,30 +151,9 @@ body {
         height: 1rem;
     }
 }
-/* Bricks a container comes with (template): marked, and hidden ones dimmed */
-.mason-block[data-template] {
-    outline: 1px solid #a78bfa;
-    outline-offset: 2px;
-}
-.mason-block[data-hidden] > .mason-block-content {
-    opacity: 0.4;
-}
-.mason-block-badge {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 10;
-    padding: 1px 6px;
-    font:
-        11px/1.4 system-ui,
-        sans-serif;
-    color: #5b21b6;
-    background: #ede9fe;
-    border-bottom-right-radius: 4px;
-    pointer-events: none;
-}
+
 /*
- * Add line with a centred button in the top level drop zones: between bricks on hover, after the last one always.
+ * Add line with a centred button in the drop zones: between bricks on hover, after the last one always.
  * The line is a narrow hover strip along the edge, so thin bricks such as a divider stay clickable;
  * only the round button takes clicks.
  */
@@ -251,7 +202,7 @@ body {
     }
 }
 /* Before the first brick: below the top edge, so the button is not cut off */
-#mason-preview-container > .mason-drop-zone:first-child > .mason-inserter {
+.mason-drop-zone:first-child > .mason-inserter {
     top: calc(50% + 0.875rem);
 }
 .mason-inserter:hover,
@@ -263,9 +214,8 @@ body {
         pointer-events: auto;
     }
 }
-/* Between top level bricks the strip overlaps their edges: only the button shows, the line once it is hovered */
-.mason-drop-zone:not([data-drop-end]):not(.mason-drop-zone-nested)
-    > .mason-inserter::before {
+/* Between bricks the strip overlaps their edges: only the button shows, the line once it is hovered */
+.mason-drop-zone:not([data-drop-end]) > .mason-inserter::before {
     opacity: 0;
     transition: opacity 0.15s;
 }
@@ -304,10 +254,6 @@ body {
     margin: 0;
     color: var(--mason-drop-zone-text, #9ca3af);
 }
-/* A disabled editor takes no pointer at all, also not the bricks inside containers, which turn it back on */
-.mason-disabled * {
-    pointer-events: none !important;
-}
 /* While dragging, the drop zone shows where the brick goes; a disabled editor has no add line */
 .mason-drop-zone.active > .mason-inserter,
 .mason-dragging .mason-drop-zone > .mason-inserter,
@@ -322,10 +268,72 @@ body {
         pointer-events: none;
     }
 }
-/* In containers: the add line after their bricks, shown when the container is hovered */
-.mason-drop-zone-nested {
-    min-height: 2rem;
+
+/*
+ * Container bricks (feat/nested-bricks). Everything for bricks inside other
+ * bricks lives below, on top of upstream's rules above, so that upstream
+ * changes to this file merge without conflicts.
+ */
+/* The bricks inside a container brick stay interactive */
+.mason-block-content .mason-block,
+.mason-block-content .mason-drop-zone {
+    pointer-events: auto;
 }
+/* A disabled editor takes no pointer at all, also not the bricks inside containers, which turn it back on */
+.mason-disabled * {
+    pointer-events: none !important;
+}
+/* Only the innermost hovered brick gets the hover frame, not every container around it */
+.mason-block:has(.mason-block:hover)::before {
+    display: none;
+}
+/* Only the selected brick's own controls, not those of the bricks inside it */
+.mason-block.selected .mason-block:not(.selected) > .mason-block-controls {
+    display: none;
+}
+/* Dropping before or after a brick, also inside a container */
+.mason-block.mason-drop-before {
+    box-shadow: 0 -3px 0 0 var(--mason-border-color, #0ea5e9);
+}
+.mason-block.mason-drop-after {
+    box-shadow: 0 3px 0 0 var(--mason-border-color, #0ea5e9);
+}
+/* Bricks a container comes with (template): marked, and hidden ones dimmed */
+.mason-block[data-template] {
+    outline: 1px solid #a78bfa;
+    outline-offset: 2px;
+}
+.mason-block[data-hidden] > .mason-block-content {
+    opacity: 0.4;
+}
+.mason-block-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    padding: 1px 6px;
+    font:
+        11px/1.4 system-ui,
+        sans-serif;
+    color: #5b21b6;
+    background: #ede9fe;
+    border-bottom-right-radius: 4px;
+    pointer-events: none;
+}
+/* The drop zone of a container: in the flow, after its bricks, not overlapping them */
+.mason-drop-zone-nested {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    margin: 0;
+    border-radius: 0.25rem;
+    color: var(--mason-drop-zone-text, #9ca3af);
+}
+.mason-drop-zone.mason-drop-zone-nested.active {
+    margin: 0;
+}
+/* Its add line shows when the container is hovered, with the line, and centred */
 .mason-block:hover
     > .mason-block-content
     .mason-drop-zone-nested
@@ -336,11 +344,20 @@ body {
         pointer-events: auto;
     }
 }
+.mason-drop-zone.mason-drop-zone-nested:not([data-drop-end])
+    > .mason-inserter::before {
+    opacity: 1;
+}
+.mason-drop-zone.mason-drop-zone-nested:first-child > .mason-inserter {
+    top: 50%;
+}
 /* An empty container: the button with the placeholder, without the line */
 .mason-drop-zone-nested.mason-drop-zone-empty {
     flex-direction: column;
     gap: 0.5rem;
+    min-height: 4rem;
     padding-block: 0.75rem;
+    border-color: var(--mason-drop-zone-border, rgba(156, 163, 175, 0.5));
 }
 .mason-drop-zone-empty > .mason-inserter {
     position: static;
@@ -360,4 +377,12 @@ body {
 .mason-block-content summary {
     pointer-events: auto;
     cursor: pointer;
+}
+/*
+ * The controls above the drop zones: on a thin brick such as a divider they reach
+ * past its bottom edge, where the next zone's add line would otherwise take their clicks.
+ * Also an issue upstream (v3.7.0).
+ */
+.mason-block-controls {
+    z-index: 11;
 }

@@ -8,6 +8,7 @@ use Closure;
 use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Throwable;
 
 abstract class Brick
 {
@@ -72,5 +73,24 @@ abstract class Brick
     public static function configureBrickAction(Action $action): Action
     {
         return $action->modalHidden();
+    }
+
+    /**
+     * Whether the brick has a form to edit. A brick without one hides its action's
+     * modal, as this class does by default, and the editor shows no edit control for it.
+     * The action is checked with the arguments the edit control mounts it with.
+     */
+    public static function isEditable(): bool
+    {
+        try {
+            $action = Action::make('isEditable')
+                ->arguments(['id' => static::getId(), 'mode' => 'edit']);
+
+            return static::configureBrickAction($action)
+                ->shouldOpenModal(checkForSchemaUsing: fn (): bool => true);
+        } catch (Throwable) {
+            // e.g. a modalHidden() closure that needs the mounted action; keep the edit control
+            return true;
+        }
     }
 }

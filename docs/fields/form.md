@@ -28,12 +28,12 @@ Clicking a brick in the preview selects it and shows its controls: move up, move
 
 **Add** opens the brick picker, where the author chooses whether to insert above or below the selected brick, and can search the available bricks.
 
-Bricks can also be added right in the preview: a line with an add button appears between bricks when the pointer is over the gap, and stays visible after the last brick. It opens the brick picker for that position. Inside container bricks, the add button of their drop zone does the same.
+Bricks can also be added right in the preview: an add button appears when the pointer is near the edge between two bricks, with a line marking the position once it is hovered. After the last brick, the line and button stay visible. The button opens the brick picker for that position. Inside container bricks, the add button of their drop zone does the same.
 
 ![The Add Brick picker with Insert above and Insert below, a search field, and the Content group of bricks](../assets/brick-picker-light.png#gh-light-mode-only)
 ![The Add Brick picker with Insert above and Insert below, a search field, and the Content group of bricks](../assets/brick-picker-dark.png#gh-dark-mode-only)
 
-**Edit** opens the brick's form. How it opens is up to the brick's `configureBrickAction()`; the hero brick here uses a slide-over.
+**Edit** opens the brick's form. How it opens is up to the brick's `configureBrickAction()`; the hero brick here uses a slide-over. Bricks without a form, such as a divider, have no **Edit** control.
 
 ![The hero brick's form open in a slide-over](../assets/edit-brick-light.png#gh-light-mode-only)
 ![The hero brick's form open in a slide-over](../assets/edit-brick-dark.png#gh-dark-mode-only)

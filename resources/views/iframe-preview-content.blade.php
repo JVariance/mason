@@ -3,7 +3,6 @@
         <div
             class="mason-drop-zone mason-drop-zone-start"
             data-drop-index="0"
-            data-drop-parent=""
             data-drop-end
         >
             <span>{{ __('mason::mason.preview.placeholder') }}</span>
@@ -14,7 +13,6 @@
         <div
             class="mason-drop-zone"
             data-drop-index="0"
-            data-drop-parent=""
             style="min-height: 2rem"
         >
             @include('mason::components.inserter')
@@ -24,7 +22,6 @@
             <div
                 class="mason-drop-zone"
                 data-drop-index="{{ $block['index'] + 1 }}"
-                data-drop-parent=""
                 @if ($loop->last) data-drop-end @endif
             >
                 @include('mason::components.inserter')
@@ -420,7 +417,7 @@
             const action = e.target.closest('[data-action]')
 
             // The add line of a drop zone opens the brick picker at its position, also inside a container
-            if (action && action.getAttribute('data-action') === 'add-into') {
+            if (action && action.getAttribute('data-action') === 'add-at') {
                 // Only the round button adds, not the hover strip around it; keyboard clicks have no position
                 if (
                     e.detail !== 0 &&
@@ -519,6 +516,14 @@
 
             const block = e.target.closest('.mason-block')
             if (!block) return
+
+            // Bricks without a form have no edit control and nothing to edit
+            if (
+                !block.querySelector(
+                    ':scope > .mason-block-controls [data-action="edit"]',
+                )
+            )
+                return
 
             // Ignore double-clicks on controls and drop zones
             if (

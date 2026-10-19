@@ -961,9 +961,9 @@ export default function masonComponent({
             this.brickPickerOpen = true
         },
 
+        // brickPickerTarget stays until the next opening, so "Insert above/below" does not change while the picker fades out
         closeBrickPicker() {
             this.brickPickerOpen = false
-            this.brickPickerTarget = null
             this.brickPickerPosition = 'below'
         },
 

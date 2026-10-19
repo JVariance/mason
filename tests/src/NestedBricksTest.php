@@ -674,16 +674,8 @@ describe('brick templates', function () {
     });
 });
 
-describe('add line in the preview', function () {
-    it('puts an add button between the top level bricks and after the last one', function () {
-        $html = IframeRenderer::make([nestedBrick('simple-brick'), nestedBrick('test-brick', ['title' => 'Second'])])
-            ->bricks([SimpleBrick::class, TestBrick::class])
-            ->toHtml();
-
-        expect(substr_count($html, 'class="mason-inserter"'))->toBe(3)
-            ->and($html)->toMatch('/data-drop-index="2"\s+data-drop-parent=""\s+data-drop-end/');
-    });
-
+// The add line at the top level is covered by IframeRendererTest
+describe('add line in containers', function () {
     it('gives the drop zones of containers the same add button, with the placeholder when empty', function () {
         $html = IframeRenderer::make([
             nestedBrick('container-brick', [], [nestedBrick('simple-brick')]),
@@ -695,14 +687,6 @@ describe('add line in the preview', function () {
 
         expect($filled)->toContain('class="mason-inserter"')->not->toContain('mason-drop-zone-placeholder')
             ->and($empty)->toContain('class="mason-inserter"')->toContain('mason-drop-zone-placeholder');
-    });
-
-    it('offers it without bricks too', function () {
-        $html = IframeRenderer::make([])->bricks([SimpleBrick::class])->toHtml();
-
-        expect($html)->toContain('mason-drop-zone-start')
-            ->toContain('class="mason-inserter"')
-            ->toContain(__('mason::mason.preview.placeholder'));
     });
 });
 

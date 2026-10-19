@@ -199,8 +199,19 @@ class IframeRenderer
             'config' => $block['attrs']['config'] ?? [],
             'html' => $this->getBlockHtml($block, $path),
             'label' => $this->getBlockLabel($id),
+            'editable' => $this->isBlockEditable($id),
             'accepts' => $this->isContainerBrick($id) ? $this->getAcceptedBrickIds($id) : null,
         ];
+    }
+
+    /**
+     * Whether the block's brick has a form to edit; an unregistered brick has none
+     */
+    protected function isBlockEditable(?string $id): bool
+    {
+        $brick = blank($id) ? null : $this->getBrick($id);
+
+        return $brick !== null && $brick::isEditable();
     }
 
     /**
